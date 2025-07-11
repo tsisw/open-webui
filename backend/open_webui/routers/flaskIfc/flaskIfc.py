@@ -21,6 +21,9 @@ baudrate = '921600'
 #baudrate = '115200'
 exe_path = "/usr/bin/tsi/v0.1.1*/bin/"
 
+DEFAULT_MODEL = "tiny-llama"
+DEFAULT_BACKEND = "tSavorite"
+DEFAULT_TOKEN = 10
 DEFAULT_REPEAT_PENALTY = 1.5
 DEFAULT_BATCH_SIZE = 1024
 DEFAULT_TOP_K = 50
@@ -316,10 +319,14 @@ def chats():
     if job_status["running"]:
         return "<h2>A model is already running. Please wait or abort.</h2>"
     #./run_llama_cli.sh "my cat's name" "10" "tinyllama-vo-5m-para.gguf" "none"
-    model = request.form.get('model')
-    backend = request.form.get('backend')
-    tokens = request.form.get('tokens')
-    prompt = request.form.get('prompt')
+    data = request.get_json()
+    print(data)
+
+    #model = data['model']
+    model = DEFAULT_MODEL
+    backend = DEFAULT_BACKEND
+    tokens = DEFAULT_TOKEN
+    prompt = data['messages'][0]['content']
     repeat_penalty = request.form.get('repeat-penalty', DEFAULT_REPEAT_PENALTY)
     batch_size = request.form.get('batch-size', DEFAULT_BATCH_SIZE)
     top_k = request.form.get('top-k', DEFAULT_TOP_K)
@@ -337,13 +344,16 @@ def chats():
         model_path = model
     script_path = "./run_llama_cli.sh"
     command = f"cd {exe_path}; {script_path} \"{prompt}\" {tokens} {model_path} {backend} {repeat_penalty} {batch_size} {top_k} {top_p} {last_n} {context_length} {temp}"
-    data = request.get_json()
-    #print(data)
+    try:
+        result = serial_script.send_serial_command(port,baudrate,command)
+    except subprocess.CalledProcessError as e:
+         job_status["result"] = f"Error: {e.stderr}"
+
     json_string ={
             "status": "success",
             "model": "ollama",
             "message": {
-                "content": "My content",
+                "content": result,
                 "thinking": "My Thought",
                 "tool_calls": None,
                 "openai_tool_calls": None
@@ -369,10 +379,14 @@ def chat():
     if job_status["running"]:
         return "<h2>A model is already running. Please wait or abort.</h2>"
     #./run_llama_cli.sh "my cat's name" "10" "tinyllama-vo-5m-para.gguf" "none"
-    model = request.form.get('model')
-    backend = request.form.get('backend')
-    tokens = request.form.get('tokens')
-    prompt = request.form.get('prompt')
+    data = request.get_json()
+    print(data)
+
+    #model = data['model']
+    model = DEFAULT_MODEL
+    backend = DEFAULT_BACKEND
+    tokens = DEFAULT_TOKEN
+    prompt = data['messages'][0]['content']
     repeat_penalty = request.form.get('repeat-penalty', DEFAULT_REPEAT_PENALTY)
     batch_size = request.form.get('batch-size', DEFAULT_BATCH_SIZE)
     top_k = request.form.get('top-k', DEFAULT_TOP_K)
@@ -402,25 +416,26 @@ def chat():
     #]
     script_path = "./run_llama_cli.sh"
     command = f"cd {exe_path}; {script_path} \"{prompt}\" {tokens} {model_path} {backend} {repeat_penalty} {batch_size} {top_k} {top_p} {last_n} {context_length} {temp}"
-#    def run_script():
-#        try:
-#            result = serial_script.send_serial_command(port,baudrate,command)
-#            job_status["result"] = result
-#        except subprocess.CalledProcessError as e:
-#            job_status["result"] = f"Error: {e.stderr}"
-#        finally:
-#            time.sleep(max(10,int(tokens)/5))
-#            job_status["running"] = False
-#    thread = threading.Thread(target=run_script)
-#    job_status = {"running": True, "result": "", "thread": thread}
-#    thread.start()
-    data = request.get_json()
-    #print(data)
+    try:
+        result = serial_script.send_serial_command(port,baudrate,command)
+        if result:
+            response_text = result
+            start_phrase = "llama_perf_sampler_print: "
+            if start_phrase in response_text:
+                filtered_text = response_text.split(start_phrase, 1)[0] # Split once and drop the second part
+                formatted_text = response_text.split(start_phrase, 1)[1]
+            else:
+                filtered_text = "Desired phrase not found in the response."
+        else:
+            filtered_text = "Desired phrase not found in the response."
+
+    except subprocess.CalledProcessError as e:
+        filtered_text = f"Error: {e.stderr}"
     json_string ={
             "status": "success",
             "model": "ollama",
             "message": {
-                "content": "My content",
+                "content": filtered_text,
                 "thinking": "My Thought",
                 "tool_calls": None,
                 "openai_tool_calls": None
