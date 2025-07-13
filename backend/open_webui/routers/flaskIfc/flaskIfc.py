@@ -10,6 +10,7 @@ import mmap
 import signal
 import serial
 import serial_script
+import re
 
 job_status = {"running": False, "result": "", "thread": None}
 
@@ -32,6 +33,10 @@ DEFAULT_LAST_N = 5
 DEFAULT_CONTEXT_LENGTH = 12288
 DEFAULT_TEMP = 0.0
 
+def is_job_running():
+    if job_status['running'] == True:
+        time.sleep(0.1)
+    return
 @app.route('/')
 def index():
 
@@ -314,19 +319,21 @@ def manual_response(data):
 @app.route('/_app', methods=['POST', 'GET'])
 @app.route('/api/chats', methods=['POST', 'GET'])
 def chats():
-    #serial_script.pre_and_post_check(port,baudrate)
     global job_status
-    if job_status["running"]:
-        return "<h2>A model is already running. Please wait or abort.</h2>"
+    serial_script.pre_and_post_check(port,baudrate)
+
     #./run_llama_cli.sh "my cat's name" "10" "tinyllama-vo-5m-para.gguf" "none"
     data = request.get_json()
     print(data)
-
+    command = original_prompt = flattened_prompt = prompt = None
     #model = data['model']
     model = DEFAULT_MODEL
     backend = DEFAULT_BACKEND
     tokens = DEFAULT_TOKEN
-    prompt = data['messages'][0]['content']
+    original_prompt = data['messages'][0]['content']
+    flattened_prompt = re.sub(r'\s+', ' ', original_prompt).strip()
+    prompt = flattened_prompt.replace('"', '\\"').encode('utf-8')
+    #prompt = prompt.decode('utf-8')
     repeat_penalty = request.form.get('repeat-penalty', DEFAULT_REPEAT_PENALTY)
     batch_size = request.form.get('batch-size', DEFAULT_BATCH_SIZE)
     top_k = request.form.get('top-k', DEFAULT_TOP_K)
@@ -345,9 +352,13 @@ def chats():
     script_path = "./run_llama_cli.sh"
     command = f"cd {exe_path}; {script_path} \"{prompt}\" {tokens} {model_path} {backend} {repeat_penalty} {batch_size} {top_k} {top_p} {last_n} {context_length} {temp}"
     try:
+        is_job_running()
+        job_status["running"] = True
         result = serial_script.send_serial_command(port,baudrate,command)
+        job_status["running"] = False
     except subprocess.CalledProcessError as e:
-         job_status["result"] = f"Error: {e.stderr}"
+        job_status["running"] = False
+        job_status["result"] = f"Error: {e.stderr}"
 
     json_string ={
             "status": "success",
@@ -374,10 +385,8 @@ def chats():
 @app.route('/api/chat/completed', methods=['POST'])
 @app.route('/api/generate', methods=['POST'])
 def chat():
-    #serial_script.pre_and_post_check(port,baudrate)
     global job_status
-    if job_status["running"]:
-        return "<h2>A model is already running. Please wait or abort.</h2>"
+    serial_script.pre_and_post_check(port,baudrate)
     #./run_llama_cli.sh "my cat's name" "10" "tinyllama-vo-5m-para.gguf" "none"
     data = request.get_json()
     print(data)
@@ -386,7 +395,10 @@ def chat():
     model = DEFAULT_MODEL
     backend = DEFAULT_BACKEND
     tokens = DEFAULT_TOKEN
-    prompt = data['messages'][0]['content']
+    original_prompt = data['messages'][0]['content']
+    flattened_prompt = re.sub(r'\s+', ' ', original_prompt).strip()
+    prompt = flattened_prompt.replace('"', '\\"').encode('utf-8')
+    #prompt = prompt.decode('utf-8')
     repeat_penalty = request.form.get('repeat-penalty', DEFAULT_REPEAT_PENALTY)
     batch_size = request.form.get('batch-size', DEFAULT_BATCH_SIZE)
     top_k = request.form.get('top-k', DEFAULT_TOP_K)
@@ -416,21 +428,32 @@ def chat():
     #]
     script_path = "./run_llama_cli.sh"
     command = f"cd {exe_path}; {script_path} \"{prompt}\" {tokens} {model_path} {backend} {repeat_penalty} {batch_size} {top_k} {top_p} {last_n} {context_length} {temp}"
-    try:
-        result = serial_script.send_serial_command(port,baudrate,command)
-        if result:
-            response_text = result
-            start_phrase = "llama_perf_sampler_print: "
-            if start_phrase in response_text:
-                filtered_text = response_text.split(start_phrase, 1)[0] # Split once and drop the second part
-                formatted_text = response_text.split(start_phrase, 1)[1]
+    def run_script(command):
+        try:
+            is_job_running()
+            job_status["running"] = True
+            result = serial_script.send_serial_command(port,baudrate,command)
+            if result:
+                response_text = result
+                start_phrase = "llama_perf_sampler_print: "
+                if start_phrase in response_text:
+                    filtered_text = response_text.split(start_phrase, 1)[0] # Split once and drop the second part
+                    formatted_text = response_text.split(start_phrase, 1)[1]
+                else:
+                    filtered_text = "Desired phrase not found in the response."
             else:
                 filtered_text = "Desired phrase not found in the response."
-        else:
-            filtered_text = "Desired phrase not found in the response."
 
-    except subprocess.CalledProcessError as e:
-        filtered_text = f"Error: {e.stderr}"
+                job_status["result"] = filtered_text
+            job_status["running"] = False
+        except subprocess.CalledProcessError as e:
+            filtered_text = f"Error: {e.stderr}"
+            job_status["result"] = filtered_text
+            job_status["running"] = False
+        return filtered_text
+
+    filtered_text = run_script(command)
+
     json_string ={
             "status": "success",
             "model": "ollama",
@@ -500,7 +523,6 @@ def submit():
 
     script_path = "./run_llama_cli.sh"
     command = f"cd {exe_path}; {script_path} \"{prompt}\" {tokens} {model_path} {backend} {repeat_penalty} {batch_size} {top_k} {top_p} {last_n} {context_length} {temp}"
-
 
     def run_script():
         try:
