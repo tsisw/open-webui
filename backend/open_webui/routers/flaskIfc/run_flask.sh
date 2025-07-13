@@ -19,7 +19,7 @@ python3 -m venv tsi-flask
 source tsi-flask/bin/activate
 #install the requirements
 pip install flask
-pin install flask-terminal
+pip install flask-terminal
 
 # Run the flaskIfc server
 sudo python3 flaskIfc.py 

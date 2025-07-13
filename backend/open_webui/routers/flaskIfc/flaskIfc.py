@@ -312,10 +312,61 @@ def system_info_serial_command():
         return f"Error executing script: {e.stderr}", 500
 
 def manual_response(data):
-    print("Response:", data)
+    print("Response:\n", json.dumps(data), "\n")
     response = make_response(json.dumps(data))
     response.headers["Content-Type"] = "application/json"
     return response
+
+def clean_up_json_string(string):
+    # 1️⃣ Extract just the JSON-looking portion
+    match = re.search(r'\{.*?\}', string)
+    if match:
+        json_candidate = match.group(0)
+
+        # 2️⃣ Replace escape sequences
+        cleaned = json_candidate.encode('utf-8').decode('unicode_escape')
+
+        # 3️⃣ Load and parse JSON
+        try:
+            parsed = json.loads(cleaned)
+            #print(json.dumps(parsed, indent=2))
+            return parsed
+        except json.JSONDecodeError as e:
+            #print("JSON parsing failed:", e)
+            return cleaned
+    else:
+        #print("No JSON object found")
+        return string
+
+def extract_final_output_after_chat_history(text):
+    chat_history_phrase = "</chat_history>"
+    if chat_history_phrase in text:
+        #parts = text.split(chat_history_phrase)
+        #filtered_text = parts[-1]  # content after the last tag
+        filtered_text = text.split(chat_history_phrase, 1)[1] # Split once and take the second part
+    else:
+        filtered_text = text
+    return filtered_text
+
+def extract_chat_history(text):
+    chat_history_phrase = "Chat History:"
+    if chat_history_phrase in text:
+        #parts = text.split(chat_history_phrase)
+        #filtered_text = parts[-1]  # content after the last tag
+        filtered_text = text.split(chat_history_phrase, 1)[1] # Split once and take the second part
+    else:
+        filtered_text = text
+    return filtered_text
+
+def extract_json_output(text):
+    start_phrase = "JSON format:"
+    if start_phrase in text:
+        #parts = text.split(start_phrase)
+        #filtered_text = parts[-1]  # content after the last tag
+        filtered_text = text.split(start_phrase, 1)[1] # Split once and take the second part
+    else:
+        filtered_text = text
+    return clean_up_json_string(filtered_text)
 
 @app.route('/_app', methods=['POST', 'GET'])
 @app.route('/api/chats', methods=['POST', 'GET'])
@@ -325,7 +376,7 @@ def chats():
 
     #./run_llama_cli.sh "my cat's name" "10" "tinyllama-vo-5m-para.gguf" "none"
     data = request.get_json()
-    print("Request:", request.method, data)
+    print("Request:\n", request.method, json.dumps(data, indent=2), "\n")
     command = original_prompt = flattened_prompt = prompt = None
     #model = data['model']
     model = DEFAULT_MODEL
@@ -364,11 +415,17 @@ def chats():
                 filtered_text = response_text.split(start_phrase, 1)[0] # Split once and drop the second part
                 formatted_text = response_text.split(start_phrase, 1)[1]
             else:
-                filtered_text = "Desired phrase not found in the response." + result
+                filtered_text = result
         else:
             filtered_text = "Result Empty: Desired phrase not found in the response."
         job_status["result"] = filtered_text
         job_status["running"] = False
+        extracted_json = extract_json_output(filtered_text)
+        chat_history = extract_chat_history(filtered_text)
+        final_chat_output = extract_final_output_after_chat_history(chat_history)
+        #print("Output Text:\n", json.dumps(extracted_json), "\n")
+        #print("Chat history:\n", chat_history)
+        print("Final_chat_output:\n", final_chat_output)
     except subprocess.CalledProcessError as e:
         job_status["running"] = False
         job_status["result"] = f"Error: {e.stderr}"
@@ -377,8 +434,8 @@ def chats():
             "status": "success",
             "model": "ollama",
             "message": {
-                "content": result,
-                "thinking": "My Thought",
+                "content": final_chat_output,
+                "thinking": chat_history,
                 "tool_calls": None,
                 "openai_tool_calls": None
                 },
@@ -403,7 +460,7 @@ def chat():
     serial_script.pre_and_post_check(port,baudrate)
     #./run_llama_cli.sh "my cat's name" "10" "tinyllama-vo-5m-para.gguf" "none"
     data = request.get_json()
-    print("Request:", request.method, data)
+    print("Request:\n", request.method, json.dumps(data, indent=2), "\n")
 
     #model = data['model']
     model = DEFAULT_MODEL
@@ -454,12 +511,13 @@ def chat():
                     filtered_text = response_text.split(start_phrase, 1)[0] # Split once and drop the second part
                     formatted_text = response_text.split(start_phrase, 1)[1]
                 else:
-                    filtered_text = "Desired phrase not found in the response." + result
+                    filtered_text = result
             else:
                 filtered_text = "Result Empty: Desired phrase not found in the response."
-
                 job_status["result"] = filtered_text
+
             job_status["running"] = False
+            return filtered_text
         except subprocess.CalledProcessError as e:
             filtered_text = f"Error: {e.stderr}"
             job_status["result"] = filtered_text
@@ -467,13 +525,18 @@ def chat():
         return filtered_text
 
     filtered_text = run_script(command)
-
+    extracted_json = extract_json_output(filtered_text)
+    chat_history = extract_chat_history(filtered_text)
+    final_chat_output = extract_final_output_after_chat_history(chat_history)
+    #print("Output Text:\n", json.dumps(extracted_json), "\n")
+    #print("Chat history:\n", chat_history)
+    print("final_chat_output:\n", chat_history)
     json_string ={
             "status": "success",
             "model": "ollama",
             "message": {
-                "content": filtered_text,
-                "thinking": "My Thought",
+                "content": final_chat_output,
+                "thinking": chat_history,
                 "tool_calls": None,
                 "openai_tool_calls": None
                 },
