@@ -312,6 +312,7 @@ def system_info_serial_command():
         return f"Error executing script: {e.stderr}", 500
 
 def manual_response(data):
+    print("Response:", data)
     response = make_response(json.dumps(data))
     response.headers["Content-Type"] = "application/json"
     return response
@@ -324,7 +325,7 @@ def chats():
 
     #./run_llama_cli.sh "my cat's name" "10" "tinyllama-vo-5m-para.gguf" "none"
     data = request.get_json()
-    print(data)
+    print("Request:", request.method, data)
     command = original_prompt = flattened_prompt = prompt = None
     #model = data['model']
     model = DEFAULT_MODEL
@@ -332,8 +333,8 @@ def chats():
     tokens = DEFAULT_TOKEN
     original_prompt = data['messages'][0]['content']
     flattened_prompt = re.sub(r'\s+', ' ', original_prompt).strip()
-    prompt = flattened_prompt.replace('"', '\\"').encode('utf-8')
-    #prompt = prompt.decode('utf-8')
+    tmpprompt = flattened_prompt.replace('"', '\\"').encode('utf-8')
+    prompt = tmpprompt.decode('utf-8')
     repeat_penalty = request.form.get('repeat-penalty', DEFAULT_REPEAT_PENALTY)
     batch_size = request.form.get('batch-size', DEFAULT_BATCH_SIZE)
     top_k = request.form.get('top-k', DEFAULT_TOP_K)
@@ -355,6 +356,18 @@ def chats():
         is_job_running()
         job_status["running"] = True
         result = serial_script.send_serial_command(port,baudrate,command)
+        job_status["running"] = False
+        if result:
+            response_text = result
+            start_phrase = "llama_perf_sampler_print: "
+            if start_phrase in response_text:
+                filtered_text = response_text.split(start_phrase, 1)[0] # Split once and drop the second part
+                formatted_text = response_text.split(start_phrase, 1)[1]
+            else:
+                filtered_text = "Desired phrase not found in the response." + result
+        else:
+            filtered_text = "Result Empty: Desired phrase not found in the response."
+        job_status["result"] = filtered_text
         job_status["running"] = False
     except subprocess.CalledProcessError as e:
         job_status["running"] = False
@@ -381,15 +394,16 @@ def chats():
             }
     return manual_response(json_string), 200
 
-@app.route('/api/chat', methods=['POST'])
-@app.route('/api/chat/completed', methods=['POST'])
-@app.route('/api/generate', methods=['POST'])
+@app.route('/api/chat', methods=['POST', 'GET'])
+@app.route('/api/chat/completion', methods=['POST', 'GET'])
+@app.route('/api/chat/completed', methods=['POST', 'GET'])
+@app.route('/api/generate', methods=['POST', 'GET'])
 def chat():
     global job_status
     serial_script.pre_and_post_check(port,baudrate)
     #./run_llama_cli.sh "my cat's name" "10" "tinyllama-vo-5m-para.gguf" "none"
     data = request.get_json()
-    print(data)
+    print("Request:", request.method, data)
 
     #model = data['model']
     model = DEFAULT_MODEL
@@ -397,8 +411,8 @@ def chat():
     tokens = DEFAULT_TOKEN
     original_prompt = data['messages'][0]['content']
     flattened_prompt = re.sub(r'\s+', ' ', original_prompt).strip()
-    prompt = flattened_prompt.replace('"', '\\"').encode('utf-8')
-    #prompt = prompt.decode('utf-8')
+    tmpprompt = flattened_prompt.replace('"', '\\"').encode('utf-8')
+    prompt = tmpprompt.decode('utf-8')
     repeat_penalty = request.form.get('repeat-penalty', DEFAULT_REPEAT_PENALTY)
     batch_size = request.form.get('batch-size', DEFAULT_BATCH_SIZE)
     top_k = request.form.get('top-k', DEFAULT_TOP_K)
@@ -440,9 +454,9 @@ def chat():
                     filtered_text = response_text.split(start_phrase, 1)[0] # Split once and drop the second part
                     formatted_text = response_text.split(start_phrase, 1)[1]
                 else:
-                    filtered_text = "Desired phrase not found in the response."
+                    filtered_text = "Desired phrase not found in the response." + result
             else:
-                filtered_text = "Desired phrase not found in the response."
+                filtered_text = "Result Empty: Desired phrase not found in the response."
 
                 job_status["result"] = filtered_text
             job_status["running"] = False

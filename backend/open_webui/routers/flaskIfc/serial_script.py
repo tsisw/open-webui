@@ -57,8 +57,10 @@ def restart_txe_serial_portion(port, baudrate, path):
 def send_serial_command(port, baudrate, command):
     try:
         ser = serial.Serial(port, baudrate)
-
+        ser.reset_output_buffer()
+        ser.reset_input_buffer()
         ser.write((command + '\n').encode())  # Send command with newline '\n'
+        ser.flush()
         # Wait to read the serial port
         data = '\0'
         first_time = 1
@@ -69,10 +71,9 @@ def send_serial_command(port, baudrate, command):
                 line = b""
                 while True:
                     byte = ser.read(1)  # Read one byte at a time
+                    line += byte
                     if (byte == b"\n") or (byte == b"#"):  # Stop when delimiter is found
                         break
-                        
-                    line += byte
                 if line: # Check if line is not empty
                     read_next_line = line.decode('utf-8')
                     if ("run-platform-done" in read_next_line.strip()) or \
@@ -96,7 +97,6 @@ def send_serial_command(port, baudrate, command):
                 ser.close()
                 return ("Program interrupted by user")
         ser.close()
-        print(data)
         return data
 
     except serial.SerialException as e:

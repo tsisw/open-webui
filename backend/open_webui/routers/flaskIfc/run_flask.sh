@@ -18,7 +18,9 @@ python3 -m venv tsi-flask
 # Activate virtual envrionment
 source tsi-flask/bin/activate
 #install the requirements
-pip install -r ../../requirements.txt 
+pip install flask
+pin install flask-terminal
+
 # Run the flaskIfc server
 sudo python3 flaskIfc.py 
 #sudo -b flask flaskIfc.py --debug run --port 5003 --host=0.0.0.0
