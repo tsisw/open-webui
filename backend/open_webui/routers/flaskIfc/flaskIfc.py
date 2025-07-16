@@ -456,18 +456,10 @@ def chats():
 @app.route('/api/chat/completed', methods=['POST', 'GET'])
 @app.route('/api/generate', methods=['POST', 'GET'])
 def chat():
-    
     global job_status
-    
     serial_script.pre_and_post_check(port,baudrate)
     
-
     data = request.get_json()
-    #print(data)
-    
-
-    
-    
 
     parameters = {'target': 'opu',
                   'num_predict': DEFAULT_TOKEN,
@@ -480,22 +472,16 @@ def chat():
                   'temperature': DEFAULT_TEMP
                 }
 
-    #print(parameters)
     if 'options' in data:
         for item in parameters:
             if item in data['options']:
                 parameters[item] = data['options'][item]
-    #print(parameters)
 
     original_prompt = data['messages'][-1]['content']
-    '''
     flattened_prompt = re.sub(r'\s+', ' ', original_prompt).strip()
     tmpprompt = flattened_prompt.replace('"', '\\"').encode('utf-8')
     prompt = tmpprompt.decode('utf-8')
-    '''
-    prompt = original_prompt
-    
-    
+      
     model = DEFAULT_MODEL
     backend = DEFAULT_BACKEND #tSavorite
     if parameters['target'] == 'cpu':
@@ -508,36 +494,6 @@ def chat():
     last_n = parameters['repeat_last_n']
     context_length = parameters['num_ctx']
     temp = parameters['temperature']
-    
-    
-    
-    #return "HIJKLMNOP"
-
-    
-    '''
-    global job_status
-    serial_script.pre_and_post_check(port,baudrate)
-    #./run_llama_cli.sh "my cat's name" "10" "tinyllama-vo-5m-para.gguf" "none"
-    data = request.get_json()
-    print("Request:\n", request.method, json.dumps(data, indent=2), "\n")
-
-    #model = data['model']
-    model = DEFAULT_MODEL
-    backend = DEFAULT_BACKEND
-    tokens = DEFAULT_TOKEN
-    original_prompt = data['messages'][0]['content']
-    flattened_prompt = re.sub(r'\s+', ' ', original_prompt).strip()
-    tmpprompt = flattened_prompt.replace('"', '\\"').encode('utf-8')
-    prompt = tmpprompt.decode('utf-8')
-    repeat_penalty = request.form.get('repeat-penalty', DEFAULT_REPEAT_PENALTY)
-    batch_size = request.form.get('batch-size', DEFAULT_BATCH_SIZE)
-    top_k = request.form.get('top-k', DEFAULT_TOP_K)
-    top_p = request.form.get('top-p', DEFAULT_TOP_P)
-    last_n = request.form.get('last-n', DEFAULT_LAST_N)
-    context_length = request.form.get('context-length', DEFAULT_CONTEXT_LENGTH)
-    temp = request.form.get('temp', DEFAULT_TEMP)
-    '''
-
     
     # Define the model path (update with actual paths)
     model_paths = {
@@ -561,7 +517,6 @@ def chat():
     #]
     script_path = "./run_llama_cli.sh"
     command = f"cd {exe_path}; {script_path} \"{prompt}\" {tokens} {model_path} {backend} {repeat_penalty} {batch_size} {top_k} {top_p} {last_n} {context_length} {temp}"
-    print("MY COMMAND: " + command)
     def run_script(command):
         try:
             is_job_running()
@@ -591,9 +546,6 @@ def chat():
     extracted_json = extract_json_output(filtered_text)
     chat_history = extract_chat_history(filtered_text)
     final_chat_output = extract_final_output_after_chat_history(chat_history)
-    #print("Output Text:\n", json.dumps(extracted_json), "\n")
-    #print("Chat history:\n", chat_history)
-    #print("final_chat_output:\n", chat_history)
     json_string ={
             "status": "success",
             "model": "ollama",
