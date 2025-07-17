@@ -389,20 +389,6 @@ def chats():
     
     data = request.get_json()
     
-
-    '''
-    parameters = {'target': 'stable',
-                  'num_predict': DEFAULT_TOKEN,
-                  'repeat_penalty': DEFAULT_REPEAT_PENALTY,
-                  'num_batch': DEFAULT_BATCH_SIZE,
-                  'top_k': DEFAULT_TOP_K,
-                  'top_p': DEFAULT_TOP_P,
-                  'repeat_last_n': DEFAULT_LAST_N,
-                  'num_ctx': DEFAULT_CONTEXT_LENGTH,
-                  'temperature': DEFAULT_TEMP
-                }
-    '''
-
     if 'options' in data:
         for item in parameters:
             if item in data['options']:
@@ -512,20 +498,6 @@ def chat():
     serial_script.pre_and_post_check(port,baudrate)
     
     data = request.get_json()
-    
-
-    '''
-    parameters = {'target': 'stable',
-                  'num_predict': DEFAULT_TOKEN,
-                  'repeat_penalty': DEFAULT_REPEAT_PENALTY,
-                  'num_batch': DEFAULT_BATCH_SIZE,
-                  'top_k': DEFAULT_TOP_K,
-                  'top_p': DEFAULT_TOP_P,
-                  'repeat_last_n': DEFAULT_LAST_N,
-                  'num_ctx': DEFAULT_CONTEXT_LENGTH,
-                  'temperature': DEFAULT_TEMP
-                }
-    '''
 
     if 'options' in data:
         for item in parameters:
