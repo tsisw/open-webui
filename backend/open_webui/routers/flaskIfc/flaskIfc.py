@@ -372,11 +372,12 @@ def extract_json_output(text):
 @app.route('/api/chats', methods=['POST', 'GET'])
 def chats():
     global job_status
+    global DEFAULT_BACKEND
     serial_script.pre_and_post_check(port,baudrate)
     
     data = request.get_json()
 
-    parameters = {'target': 'opu',
+    parameters = {'target': 'stable',
                   'num_predict': DEFAULT_TOKEN,
                   'repeat_penalty': DEFAULT_REPEAT_PENALTY,
                   'num_batch': DEFAULT_BATCH_SIZE,
@@ -398,9 +399,13 @@ def chats():
     prompt = tmpprompt.decode('utf-8')
       
     model = DEFAULT_MODEL
-    backend = DEFAULT_BACKEND #tSavorite
+
     if parameters['target'] == 'cpu':
-        backend = 'none'
+        DEFAULT_BACKEND = 'none'
+    elif parameters['target'] == 'opu':
+        DEFAULT_BACKEND = 'tSavorite'
+    backend = DEFAULT_BACKEND
+
     tokens = parameters['num_predict']
     repeat_penalty = parameters['repeat_penalty']
     batch_size = parameters['num_batch']
@@ -488,11 +493,12 @@ def chats():
 @app.route('/api/generate', methods=['POST', 'GET'])
 def chat():
     global job_status
+    global DEFAULT_BACKEND
     serial_script.pre_and_post_check(port,baudrate)
     
     data = request.get_json()
 
-    parameters = {'target': 'opu',
+    parameters = {'target': 'stable',
                   'num_predict': DEFAULT_TOKEN,
                   'repeat_penalty': DEFAULT_REPEAT_PENALTY,
                   'num_batch': DEFAULT_BATCH_SIZE,
@@ -514,9 +520,13 @@ def chat():
     prompt = tmpprompt.decode('utf-8')
       
     model = DEFAULT_MODEL
-    backend = DEFAULT_BACKEND #tSavorite
+
     if parameters['target'] == 'cpu':
-        backend = 'none'
+        DEFAULT_BACKEND = 'none'
+    elif parameters['target'] == 'opu':
+        DEFAULT_BACKEND = 'tSavorite'
+    backend = DEFAULT_BACKEND
+
     tokens = parameters['num_predict']
     repeat_penalty = parameters['repeat_penalty']
     batch_size = parameters['num_batch']
