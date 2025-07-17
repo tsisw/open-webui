@@ -33,6 +33,17 @@ DEFAULT_LAST_N = 5
 DEFAULT_CONTEXT_LENGTH = 12288
 DEFAULT_TEMP = 0.0
 
+parameters = {    'target': 'opu',
+                  'num_predict': DEFAULT_TOKEN,
+                  'repeat_penalty': DEFAULT_REPEAT_PENALTY,
+                  'num_batch': DEFAULT_BATCH_SIZE,
+                  'top_k': DEFAULT_TOP_K,
+                  'top_p': DEFAULT_TOP_P,
+                  'repeat_last_n': DEFAULT_LAST_N,
+                  'num_ctx': DEFAULT_CONTEXT_LENGTH,
+                  'temperature': DEFAULT_TEMP
+                }
+
 def is_job_running():
     if job_status['running'] == True:
         time.sleep(0.1)
@@ -372,11 +383,14 @@ def extract_json_output(text):
 @app.route('/api/chats', methods=['POST', 'GET'])
 def chats():
     global job_status
-    global DEFAULT_BACKEND
+    global parameters
+
     serial_script.pre_and_post_check(port,baudrate)
     
     data = request.get_json()
+    
 
+    '''
     parameters = {'target': 'stable',
                   'num_predict': DEFAULT_TOKEN,
                   'repeat_penalty': DEFAULT_REPEAT_PENALTY,
@@ -387,6 +401,7 @@ def chats():
                   'num_ctx': DEFAULT_CONTEXT_LENGTH,
                   'temperature': DEFAULT_TEMP
                 }
+    '''
 
     if 'options' in data:
         for item in parameters:
@@ -401,11 +416,10 @@ def chats():
     model = DEFAULT_MODEL
 
     if parameters['target'] == 'cpu':
-        DEFAULT_BACKEND = 'none'
+        backend = 'none'
     elif parameters['target'] == 'opu':
-        DEFAULT_BACKEND = 'tSavorite'
-    backend = DEFAULT_BACKEND
-
+        backend = 'tSavorite'
+    
     tokens = parameters['num_predict']
     repeat_penalty = parameters['repeat_penalty']
     batch_size = parameters['num_batch']
@@ -493,11 +507,14 @@ def chats():
 @app.route('/api/generate', methods=['POST', 'GET'])
 def chat():
     global job_status
-    global DEFAULT_BACKEND
+    global parameters
+
     serial_script.pre_and_post_check(port,baudrate)
     
     data = request.get_json()
+    
 
+    '''
     parameters = {'target': 'stable',
                   'num_predict': DEFAULT_TOKEN,
                   'repeat_penalty': DEFAULT_REPEAT_PENALTY,
@@ -508,6 +525,7 @@ def chat():
                   'num_ctx': DEFAULT_CONTEXT_LENGTH,
                   'temperature': DEFAULT_TEMP
                 }
+    '''
 
     if 'options' in data:
         for item in parameters:
@@ -522,11 +540,10 @@ def chat():
     model = DEFAULT_MODEL
 
     if parameters['target'] == 'cpu':
-        DEFAULT_BACKEND = 'none'
+        backend = 'none'
     elif parameters['target'] == 'opu':
-        DEFAULT_BACKEND = 'tSavorite'
-    backend = DEFAULT_BACKEND
-
+        backend = 'tSavorite'
+    
     tokens = parameters['num_predict']
     repeat_penalty = parameters['repeat_penalty']
     batch_size = parameters['num_batch']
