@@ -596,8 +596,33 @@ def chat():
                 }
             }
     return manual_response(json_string), 200
-    
-    
+
+@app.route('/api/restart-txe', methods=['GET', 'POST'])
+def restart_txe_ollama_serial_command():
+    global job_status
+    global parameters
+    serial_script.pre_and_post_check(port,baudrate)
+    internal_restart_txe()
+    json_string ={
+            "status": "success",
+            "model": "ollama",
+            "message": {
+                "content": "Restart OPU Done",
+                "thinking": "Restart OPU Done",
+                "tool_calls": None,
+                "openai_tool_calls": None
+                },
+            "user": {
+                "name": "Alice",
+                "id": "12345",
+                "email": "alice@example.com",
+                "role": "admin"
+                },
+            "data": {
+                "some_key": "some_value"
+                }
+            }
+    return manual_response(json_string), 200
 
 @app.route('/submit', methods=['POST'])
 def submit():
