@@ -716,6 +716,24 @@ async def unload_model(
     return {"status": True}
 
 
+@router.post("/api/pullhelper")
+async def model_puller_helper(user=Depends(get_admin_user),gold:str = ''):
+    
+
+    url = "http://127.0.0.1:5000"
+
+    # Admin should be able to pull models from any source
+    payload = {'actual_name':gold}
+    
+    
+    return await send_post_request(
+        url=f"{url}/api/apple",
+        payload=json.dumps(payload),
+        stream=False,
+        key=None,
+        user=user,
+    )
+
 @router.post("/api/pull")
 @router.post("/api/pull/{url_idx}")
 async def pull_model(
@@ -789,6 +807,8 @@ async def pull_model(
     # MEERA CODE
     '''
     
+    '''
+    #EMERGENCY SOLUTION
     path = "/usr/share/ollama/.ollama/models/blobs/" + GOLDEN_NAME
     curl_command = [
     "curl",
@@ -806,6 +826,10 @@ async def pull_model(
     print("stdout:", result.stdout)
     print("stderr:", result.stderr)
     print("returncode:", result.returncode)
+    #EMERGENCY SOLUTION
+    '''
+
+    await model_puller_helper(user,GOLDEN_NAME)
 
 
     

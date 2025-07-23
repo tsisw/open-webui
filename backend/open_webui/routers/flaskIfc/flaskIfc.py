@@ -11,6 +11,8 @@ import signal
 import serial
 import serial_script
 import re
+from werkzeug.datastructures import FileStorage
+
 
 job_status = {"running": False, "result": "", "thread": None}
 
@@ -148,12 +150,16 @@ def upload_serial_command():
 
         # Save the file if it exists
         if file:
-            filename = secure_filename(file.filename)
+            print("BEFORE")
+            print(file.filename)
+            filename = file.filename #secure_filename(file.filename)
+            print("HERE")
+            print(filename)
             process = subprocess.Popen(["./copy2fpga-x86.sh", filename], text=True)
             copy2fpgax86prints = "Starting copy2fpga-x86 and sending file..."
             print (copy2fpgax86prints)
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-
+            time.sleep(3)
             script_path = "./recvFromHost "
             command = f"cd {exe_path}; {script_path} {destn_path}{filename}"
             def scriptRecvFromHost():
@@ -176,6 +182,76 @@ def upload_serial_command():
 
         return render_template('uploadtofpga.html', apple = process, recvoutput=f"On FPGA Target, recvFromHost completed ; transfered file:{filename} received")
     return render_template('upload.html') # Display the upload form
+
+def pineapple(file):
+    # Check if the file is empty
+        if file.filename == '':
+            return "No file selected"
+
+        # Save the file if it exists
+        if file:
+            print("BEFORE")
+            print(file.filename)
+            filename = file.filename #secure_filename(file.filename)
+            print("HERE")
+            print(filename)
+            process = subprocess.Popen(["./copy2fpga-x86.sh", filename], text=True)
+            copy2fpgax86prints = "Starting copy2fpga-x86 and sending file..."
+            print (copy2fpgax86prints)
+            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            time.sleep(3)
+            script_path = "./recvFromHost "
+            command = f"cd {exe_path}; {script_path} {destn_path}{filename}"
+            def scriptRecvFromHost():
+                 try:
+                     result = serial_script.send_serial_command(port,baudrate,command)
+                     job_status["result"] = result
+                     print(result)
+                     recv_output = result
+                 except subprocess.CalledProcessError as e:
+                     job_status["result"] = f"Error: {e.stderr}"
+                 finally:
+                     job_status["running"] = False
+            thread = threading.Thread(target=scriptRecvFromHost)
+            job_status = {"running": True, "result": "", "thread": thread}
+            thread.start()
+            thread.join()
+            stdout, stderr = process.communicate()
+        
+        read_cmd_from_serial(port,baudrate,f"cd {destn_path}; ls -lt")
+
+@app.route('/api/apple', methods=['GET', 'POST'])
+def grape():
+    data = request.get_json()
+    print('FRUIT')
+    print(data)
+    path = "/usr/share/ollama/.ollama/models/blobs/" + data['actual_name']
+    file_obj = open(path, "rb")
+    upload = FileStorage(stream=file_obj, filename=data['actual_name'], content_type="application/octet-stream")
+
+
+    pineapple(upload)
+
+    json_string ={
+            "status": "success",
+            "model": "ollama",
+            "message": {
+                "content": "Restart OPU Done",
+                "thinking": "Restart OPU Done",
+                "tool_calls": None,
+                "openai_tool_calls": None
+                },
+            "user": {
+                "name": "Alice",
+                "id": "12345",
+                "email": "alice@example.com",
+                "role": "admin"
+                },
+            "data": {
+                "some_key": "some_value"
+                }
+            }
+    return manual_response(json_string), 200
 
 
 #    command = f"upload file"
@@ -599,6 +675,10 @@ def chat():
                 }
             }
     return manual_response(json_string), 200
+
+
+
+
 
 @app.route('/api/restart-txe', methods=['GET', 'POST'])
 def restart_txe_ollama_serial_command():
