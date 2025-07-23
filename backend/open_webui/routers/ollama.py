@@ -1,7 +1,7 @@
 # TODO: Implement a more intelligent load balancing mechanism for distributing requests among multiple backend instances.
 # Current implementation uses a simple round-robin approach (random.choice). Consider incorporating algorithms like weighted round-robin,
 # least connections, or least response time for better resource utilization and performance optimization.
-
+import subprocess
 import asyncio
 import json
 import logging
@@ -732,13 +732,88 @@ async def pull_model(
 
     # Admin should be able to pull models from any source
     payload = {**form_data, "insecure": True}
-
-    return await send_post_request(
+    
+    
+    experiment = await send_post_request(
         url=f"{url}/api/pull",
         payload=json.dumps(payload),
         key=get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS),
         user=user,
     )
+    
+    GOLDEN_NAME = None
+    async for line in experiment.body_iterator:
+        decoded = line.decode("utf-8")
+        if GOLDEN_NAME == None:
+            data = json.loads(decoded)
+            if "digest" in data:
+                GOLDEN_NAME = data["digest"]
+
+        print(decoded,'')  # or buffer it, write to file, etc.
+    
+    GOLDEN_NAME = '-'.join(GOLDEN_NAME.split(':'))
+    print(GOLDEN_NAME) #sha-key
+    
+    
+    '''
+    # MEERA CODE 
+    UPLOAD_FOLDER = './' # Directory where recvFromHost is loaded 
+    destn_path='/tsi/proj/model-cache/gguf/' # Destination Directory in FPGA where uploaded files will be stored
+    #app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+    os.makedirs(UPLOAD_FOLDER, exist_ok=True) # Create the upload folder if it doesn't exist
+    exe_path = "/usr/bin/tsi/v0.1.1*/bin/"
+
+    file = open("/usr/share/ollama/.ollama/models/blobs/"+GOLDEN_NAME, "rb")
+
+    filename = GOLDEN_NAME #secure_filename(file.filename)
+    process = subprocess.Popen(["./copy2fpga-x86.sh", filename], text=True)
+    print("Starting copy2fpga-x86 and sending file...")
+    file.save(os.path.join(UPLOAD_FOLDER, filename))
+
+    script_path = "./recvFromHost "
+    command = f"cd {exe_path}; {script_path} {destn_path}{filename}"
+    def scriptRecvFromHost():
+            try:
+                result = serial_script.send_serial_command(port,baudrate,command)
+                job_status["result"] = result
+                print(result)
+                recv_output = result
+            except subprocess.CalledProcessError as e:
+                job_status["result"] = f"Error: {e.stderr}"
+            finally:
+                job_status["running"] = False
+    thread = threading.Thread(target=scriptRecvFromHost)
+    job_status = {"running": True, "result": "", "thread": thread}
+    thread.start()
+    thread.join()
+    # MEERA CODE
+    '''
+    
+    path = "/usr/share/ollama/.ollama/models/blobs/" + GOLDEN_NAME
+    curl_command = [
+    "curl",
+    "-X", "POST",
+    "-F", f"file=@{path}" ,
+    "http://127.0.0.1:5000/upload-gguf"
+    ]
+    print(curl_command)
+    print("Command to run:", " ".join(curl_command))
+
+    result = subprocess.Popen(curl_command,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
+
+    #subprocess.run(curl_command, capture_output=True, text=True)
+
+    print("stdout:", result.stdout)
+    print("stderr:", result.stderr)
+    print("returncode:", result.returncode)
+
+
+    
+
+
+    
+
+    return experiment
 
 
 class PushModelForm(BaseModel):
