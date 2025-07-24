@@ -213,8 +213,9 @@ def actual_transfer(file):
             thread.start()
             thread.join()
             stdout, stderr = process.communicate()
-        
+        time.sleep(1)
         read_cmd_from_serial(port,baudrate,f"cd {destn_path}; ls -lt")
+        time.sleep(1)
 
 @app.route('/api/receive', methods=['GET', 'POST'])
 def receive_pull_model():

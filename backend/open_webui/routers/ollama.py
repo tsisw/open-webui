@@ -720,7 +720,7 @@ async def unload_model(
 async def pull_model_helper(user=Depends(get_admin_user),gold:str = ''):
     
 
-    url = "http://127.0.0.1:5000"
+    url = DEFAULT_FLASK_URL #"http://127.0.0.1:5000"
 
     # Admin should be able to pull models from any source
     payload = {'actual_name':gold}
