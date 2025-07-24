@@ -150,11 +150,7 @@ def upload_serial_command():
 
         # Save the file if it exists
         if file:
-            print("BEFORE")
-            print(file.filename)
             filename = file.filename #secure_filename(file.filename)
-            print("HERE")
-            print(filename)
             process = subprocess.Popen(["./copy2fpga-x86.sh", filename], text=True)
             copy2fpgax86prints = "Starting copy2fpga-x86 and sending file..."
             print (copy2fpgax86prints)
@@ -226,7 +222,7 @@ def receive_pull_model():
 
     actual_transfer(upload)
 
-    return manual_response(content="File Download Done",thinking="File Download Done"), 200
+    return manual_response(content="File Download Done",thinking="File Download Done",), 200
 
 
 #    command = f"upload file"
@@ -373,7 +369,7 @@ def system_info_serial_command():
     except subprocess.CalledProcessError as e:
         return f"Error executing script: {e.stderr}", 500
 
-def manual_response(status="sucess",model="ollama",content="Restart OPU Done",thinking="Restart OPU Done",tool_calls=None,openai_tool_calls=None,name="Alice",id="12345",email="alice@example.com",role="admin",some_key="some_value"):
+def manual_response(status="sucess",model="ollama",content=None,thinking=None,tool_calls=None,openai_tool_calls=None,name="Alice",id="12345",email="alice@example.com",role="admin",some_key="some_value",profile_data=None):
     json_string ={
             "status": status,
             "model": model,
@@ -390,7 +386,8 @@ def manual_response(status="sucess",model="ollama",content="Restart OPU Done",th
                 "role": role
                 },
             "data": {
-                "some_key": some_key
+                "some_key": some_key,
+                "profile_data": profile_data
                 }
             }
     print("Response:\n", json.dumps(json_string), "\n")
@@ -537,7 +534,7 @@ def chats():
     chat_history = extract_chat_history(filtered_text)
     final_chat_output = extract_final_output_after_chat_history(chat_history)
     
-    return manual_response(content=final_chat_output,thinking=chat_history), 200
+    return manual_response(content=final_chat_output,thinking=chat_history,profile_data=profile_text), 200
 
 @app.route('/api/chat', methods=['POST', 'GET'])
 @app.route('/api/chat/completion', methods=['POST', 'GET'])
@@ -630,7 +627,7 @@ def chat():
     chat_history = extract_chat_history(filtered_text)
     final_chat_output = extract_final_output_after_chat_history(chat_history)
     
-    return manual_response(content=final_chat_output,thinking=chat_history), 200
+    return manual_response(content=final_chat_output,thinking=chat_history,profile_data=profile_text), 200
 
 
 
@@ -643,7 +640,7 @@ def restart_txe_ollama_serial_command():
     serial_script.pre_and_post_check(port,baudrate)
     internal_restart_txe()
     
-    return manual_response(), 200
+    return manual_response(content="Restarted OPU",thinking="Restarted OPU"), 200
 
 @app.route('/submit', methods=['POST'])
 def submit():
