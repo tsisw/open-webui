@@ -717,7 +717,7 @@ async def unload_model(
 
 
 @router.post("/api/pullhelper")
-async def model_puller_helper(user=Depends(get_admin_user),gold:str = ''):
+async def pull_model_helper(user=Depends(get_admin_user),gold:str = ''):
     
 
     url = "http://127.0.0.1:5000"
@@ -727,7 +727,7 @@ async def model_puller_helper(user=Depends(get_admin_user),gold:str = ''):
     
     
     return await send_post_request(
-        url=f"{url}/api/apple",
+        url=f"{url}/api/receive",
         payload=json.dumps(payload),
         stream=False,
         key=None,
@@ -772,70 +772,7 @@ async def pull_model(
     GOLDEN_NAME = '-'.join(GOLDEN_NAME.split(':'))
     print(GOLDEN_NAME) #sha-key
     
-    
-    '''
-    # MEERA CODE 
-    UPLOAD_FOLDER = './' # Directory where recvFromHost is loaded 
-    destn_path='/tsi/proj/model-cache/gguf/' # Destination Directory in FPGA where uploaded files will be stored
-    #app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-    os.makedirs(UPLOAD_FOLDER, exist_ok=True) # Create the upload folder if it doesn't exist
-    exe_path = "/usr/bin/tsi/v0.1.1*/bin/"
-
-    file = open("/usr/share/ollama/.ollama/models/blobs/"+GOLDEN_NAME, "rb")
-
-    filename = GOLDEN_NAME #secure_filename(file.filename)
-    process = subprocess.Popen(["./copy2fpga-x86.sh", filename], text=True)
-    print("Starting copy2fpga-x86 and sending file...")
-    file.save(os.path.join(UPLOAD_FOLDER, filename))
-
-    script_path = "./recvFromHost "
-    command = f"cd {exe_path}; {script_path} {destn_path}{filename}"
-    def scriptRecvFromHost():
-            try:
-                result = serial_script.send_serial_command(port,baudrate,command)
-                job_status["result"] = result
-                print(result)
-                recv_output = result
-            except subprocess.CalledProcessError as e:
-                job_status["result"] = f"Error: {e.stderr}"
-            finally:
-                job_status["running"] = False
-    thread = threading.Thread(target=scriptRecvFromHost)
-    job_status = {"running": True, "result": "", "thread": thread}
-    thread.start()
-    thread.join()
-    # MEERA CODE
-    '''
-    
-    '''
-    #EMERGENCY SOLUTION
-    path = "/usr/share/ollama/.ollama/models/blobs/" + GOLDEN_NAME
-    curl_command = [
-    "curl",
-    "-X", "POST",
-    "-F", f"file=@{path}" ,
-    "http://127.0.0.1:5000/upload-gguf"
-    ]
-    print(curl_command)
-    print("Command to run:", " ".join(curl_command))
-
-    result = subprocess.Popen(curl_command,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
-
-    #subprocess.run(curl_command, capture_output=True, text=True)
-
-    print("stdout:", result.stdout)
-    print("stderr:", result.stderr)
-    print("returncode:", result.returncode)
-    #EMERGENCY SOLUTION
-    '''
-
-    await model_puller_helper(user,GOLDEN_NAME)
-
-
-    
-
-
-    
+    await pull_model_helper(user,GOLDEN_NAME)
 
     return experiment
 

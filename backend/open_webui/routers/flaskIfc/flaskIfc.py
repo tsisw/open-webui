@@ -183,18 +183,14 @@ def upload_serial_command():
         return render_template('uploadtofpga.html', apple = process, recvoutput=f"On FPGA Target, recvFromHost completed ; transfered file:{filename} received")
     return render_template('upload.html') # Display the upload form
 
-def pineapple(file):
+def actual_transfer(file):
     # Check if the file is empty
         if file.filename == '':
             return "No file selected"
 
         # Save the file if it exists
         if file:
-            print("BEFORE")
-            print(file.filename)
             filename = file.filename #secure_filename(file.filename)
-            print("HERE")
-            print(filename)
             process = subprocess.Popen(["./copy2fpga-x86.sh", filename], text=True)
             copy2fpgax86prints = "Starting copy2fpga-x86 and sending file..."
             print (copy2fpgax86prints)
@@ -220,38 +216,16 @@ def pineapple(file):
         
         read_cmd_from_serial(port,baudrate,f"cd {destn_path}; ls -lt")
 
-@app.route('/api/apple', methods=['GET', 'POST'])
-def grape():
+@app.route('/api/receive', methods=['GET', 'POST'])
+def receive_pull_model():
     data = request.get_json()
-    print('FRUIT')
-    print(data)
     path = "/usr/share/ollama/.ollama/models/blobs/" + data['actual_name']
     file_obj = open(path, "rb")
     upload = FileStorage(stream=file_obj, filename=data['actual_name'], content_type="application/octet-stream")
 
+    actual_transfer(upload)
 
-    pineapple(upload)
-
-    json_string ={
-            "status": "success",
-            "model": "ollama",
-            "message": {
-                "content": "Restart OPU Done",
-                "thinking": "Restart OPU Done",
-                "tool_calls": None,
-                "openai_tool_calls": None
-                },
-            "user": {
-                "name": "Alice",
-                "id": "12345",
-                "email": "alice@example.com",
-                "role": "admin"
-                },
-            "data": {
-                "some_key": "some_value"
-                }
-            }
-    return manual_response(json_string), 200
+    return manual_response(content="File Download Done",thinking="File Download Done"), 200
 
 
 #    command = f"upload file"
@@ -398,9 +372,28 @@ def system_info_serial_command():
     except subprocess.CalledProcessError as e:
         return f"Error executing script: {e.stderr}", 500
 
-def manual_response(data):
-    print("Response:\n", json.dumps(data), "\n")
-    response = make_response(json.dumps(data))
+def manual_response(status="sucess",model="ollama",content="Restart OPU Done",thinking="Restart OPU Done",tool_calls=None,openai_tool_calls=None,name="Alice",id="12345",email="alice@example.com",role="admin",some_key="some_value"):
+    json_string ={
+            "status": status,
+            "model": model,
+            "message": {
+                "content": content,
+                "thinking": thinking,
+                "tool_calls": tool_calls,
+                "openai_tool_calls": openai_tool_calls
+                },
+            "user": {
+                "name": name,
+                "id": id,
+                "email": email,
+                "role": role
+                },
+            "data": {
+                "some_key": some_key
+                }
+            }
+    print("Response:\n", json.dumps(json_string), "\n")
+    response = make_response(json.dumps(json_string))
     response.headers["Content-Type"] = "application/json"
     return response
 
@@ -542,27 +535,8 @@ def chats():
     extracted_json = extract_json_output(filtered_text)
     chat_history = extract_chat_history(filtered_text)
     final_chat_output = extract_final_output_after_chat_history(chat_history)
-    json_string ={
-            "status": "success",
-            "model": "ollama",
-            "message": {
-                "content": final_chat_output,
-                "thinking": chat_history,
-                "tool_calls": None,
-                "openai_tool_calls": None
-                },
-            "user": {
-                "name": "Alice",
-                "id": "12345",
-                "email": "alice@example.com",
-                "role": "admin"
-                },
-            "data": {
-                "some_key": "some_value",
-                "profile_data": profile_text
-                }
-            }
-    return manual_response(json_string), 200
+    
+    return manual_response(content=final_chat_output,thinking=chat_history), 200
 
 @app.route('/api/chat', methods=['POST', 'GET'])
 @app.route('/api/chat/completion', methods=['POST', 'GET'])
@@ -654,27 +628,8 @@ def chat():
     extracted_json = extract_json_output(filtered_text)
     chat_history = extract_chat_history(filtered_text)
     final_chat_output = extract_final_output_after_chat_history(chat_history)
-    json_string ={
-            "status": "success",
-            "model": "ollama",
-            "message": {
-                "content": final_chat_output,
-                "thinking": chat_history,
-                "tool_calls": None,
-                "openai_tool_calls": None
-                },
-            "user": {
-                "name": "Alice",
-                "id": "12345",
-                "email": "alice@example.com",
-                "role": "admin"
-                },
-            "data": {
-                "some_key": "some_value",
-                "profile_data": profile_text
-                }
-            }
-    return manual_response(json_string), 200
+    
+    return manual_response(content=final_chat_output,thinking=chat_history), 200
 
 
 
@@ -686,26 +641,8 @@ def restart_txe_ollama_serial_command():
     global parameters
     serial_script.pre_and_post_check(port,baudrate)
     internal_restart_txe()
-    json_string ={
-            "status": "success",
-            "model": "ollama",
-            "message": {
-                "content": "Restart OPU Done",
-                "thinking": "Restart OPU Done",
-                "tool_calls": None,
-                "openai_tool_calls": None
-                },
-            "user": {
-                "name": "Alice",
-                "id": "12345",
-                "email": "alice@example.com",
-                "role": "admin"
-                },
-            "data": {
-                "some_key": "some_value"
-                }
-            }
-    return manual_response(json_string), 200
+    
+    return manual_response(), 200
 
 @app.route('/submit', methods=['POST'])
 def submit():
