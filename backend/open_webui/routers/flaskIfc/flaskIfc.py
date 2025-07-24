@@ -22,7 +22,6 @@ baudrate = '921600'
 #baudrate = '115200'
 exe_path = "/usr/bin/tsi/v0.1.1*/bin/"
 
-#DEFAULT_MODEL = "Tiny-llama-F32"
 DEFAULT_MODEL = "tiny-llama"
 DEFAULT_BACKEND = "tSavorite"
 DEFAULT_TOKEN = 10
@@ -380,15 +379,13 @@ def extract_json_output(text):
         filtered_text = text
     return clean_up_json_string(filtered_text)
 
-perf_text = "   sampling time =     201.23 ms /    16 runs   (   12.58 ms per token,    79.51 tokens per second)llama_perf_context_print:        load time =    2063.49 ms\nllama_perf_context_print: prompt eval time =     523.13 ms /     6 tokens (   87.19 ms per token,    11.47 tokens per second)\nllama_perf_context_print:        eval time =    1169.74 ms /     9 runs   (  129.97 ms per token,     7.69 tokens per second)\nllama_perf_context_print:       total time =    3489.51 ms /    15 tokens\n\n=== GGML Perf Summary ===\nOp              :    Runs        Total us            Avg us\nADD             :     160          183133           1144.58\n[TSAVORITE ] :     160          183133           1144.58\nMUL             :     250          565771           2263.08\n[TSAVORITE ] :     250          565771           2263.08\nRMS_NORM        :     558            2551              4.57\n[CPU       ] :     558            2551              4.57\nMUL_MAT         :    2323         1489082            641.02\n[CPU       ] :    2323         1489082            641.02\nCPY             :     528            4996              9.46\n[CPU       ] :     528            4996              9.46\nCONT            :     212             801              3.78\n[CPU       ] :     212             801              3.78\nRESHAPE         :     633             500              0.79\n[CPU       ] :     633             500              0.79\nVIEW            :     577             362              0.63\n[CPU       ] :     577             362              0.63\nPERMUTE         :     585             422              0.72\n[CPU       ] :     585             422              0.72\nTRANSPOSE       :     155             146              0.94\n[CPU       ] :     155             146              0.94\nGET_ROWS        :      85             835              9.82\n[CPU       ] :      85             835              9.82\nSOFT_MAX        :     251           18505             73.73\n[CPU       ] :     251           18505             73.73\nROPE            :     361            2776              7.69\n[CPU       ] :     361            2776              7.69\nUNARY           :      80          356573           4457.16\n[TSAVORITE ] :      80          356573           4457.16\n-> SILU        :      80          356573           4457.16\n\nGGML Tsavorite Profiling Results:\n------------------------------------------------------------------------------------------------------------------------\nCalls  Total(ms)    T/call    Self(ms)  Function\n------------------------------------------------------------------------------------------------------------------------\n1    44.6810   44.6810      1.2620  [ 1.01%] [Thread] GGML Tsavorite\n1    43.4190   43.4190     41.3780  \u2514\u2500 [9.85e-01%] tsi::runtime::TsavRTFPGA::initialize\n1     1.0100    1.0100      1.0100    \u2514\u2500 [2.29e-02%] tsi::runtime::TsavRTFPGA::initializeQueues\n1     0.8460    0.8460      0.8460    \u2514\u2500 [1.92e-02%] tsi::runtime::TsavRT::initialize\n1     0.1850    0.1850      0.1290    \u2514\u2500 [4.20e-03%] tsi::runtime::TsavRTFPGA::sendNOPTestCommand\n2     0.0560    0.0280      0.0560      \u2514\u2500 [1.27e-03%] tsi::runtime::executeWithTimeout\n------------------------------------------------------------------------------------------------------------------------\n[Thread] tsi::runtime::TsavRT::awaitCommandListCompletion (cumulative over all threads)\n------------------------------------------------------------------------------------------------------------------------\n1395   376.8970    0.2702      0.0000  [ 8.55%] [Thread] tsi::runtime::TsavRT::awaitCommandListCompletion\n1395  2022.0451    1.4495   2022.0451  \u2514\u2500 [45.88%] TXE 0 Idle\n705   102.2900    0.1451    102.2900  \u2514\u2500 [ 2.32%] [ txe_mult ]\n460    67.6694    0.1471     67.6694  \u2514\u2500 [ 1.54%] [ txe_silu ]\n230    33.4308    0.1454     33.4308  \u2514\u2500 [7.59e-01%] [ txe_add ]\n------------------------------------------------------------------------------------------------------------------------\n[Thread] tsi::runtime::TsavRT::finalizeCommandList (cumulative over all threads)\n------------------------------------------------------------------------------------------------------------------------\n1395   159.7230    0.1145    150.2800  [ 3.62%] [Thread] tsi::runtime::TsavRT::finalizeCommandList\n1395     9.4430    0.0068      9.4430  \u2514\u2500 [2.14e-01%] tsi::runtime::executeWithTimeout\n------------------------------------------------------------------------------------------------------------------------\n[Thread] tsi::runtime::TsavRT::processResponses (cumulative over all threads)\n------------------------------------------------------------------------------------------------------------------------\n1395   361.7410    0.2593     29.4940  [ 8.21%] [Thread] tsi::runtime::TsavRT::processResponses\n1395   332.2470    0.2382    332.2470  \u2514\u2500 [ 7.54%] tsi::runtime::executeWithTimeout\n------------------------------------------------------------------------------------------------------------------------\n[Thread] tsi::runtime::TsavRTFPGA::finalize (cumulative over all threads)\n------------------------------------------------------------------------------------------------------------------------\n1    42.9160   42.9160     41.7240  [9.74e-01%] [Thread] tsi::runtime::TsavRTFPGA::finalize\n1     1.1920    1.1920      1.1920  \u2514\u2500 [2.70e-02%] tsi::runtime::TsavRTFPGA::releaseTxes\n------------------------------------------------------------------------------------------------------------------------\n[Thread] tsi::runtime::TsavRT::allocate (cumulative over all threads)\n------------------------------------------------------------------------------------------------------------------------\n1396    15.5140    0.0111     15.5140  [3.52e-01%] [Thread] tsi::runtime::TsavRT::allocate\n------------------------------------------------------------------------------------------------------------------------\n[Thread] tsi::runtime::TsavRTFPGA::loadBlob (cumulative over all threads)\n------------------------------------------------------------------------------------------------------------------------\n1395   260.1190    0.1865    260.1190  [ 5.90%] [Thread] tsi::runtime::TsavRTFPGA::loadBlob\n------------------------------------------------------------------------------------------------------------------------\n[Thread] tsi::runtime::TsavRT::addCommandToList (cumulative over all threads)\n------------------------------------------------------------------------------------------------------------------------\n1395    48.0630    0.0345     48.0630  [ 1.09%] [Thread] tsi::runtime::TsavRT::addCommandToList\n------------------------------------------------------------------------------------------------------------------------\n[Thread] tsi::runtime::TsavRTFPGA::unloadBlob (cumulative over all threads)\n------------------------------------------------------------------------------------------------------------------------\n1395   101.6770    0.0729    101.6770  [ 2.31%] [Thread] tsi::runtime::TsavRTFPGA::unloadBlob\n------------------------------------------------------------------------------------------------------------------------\n[Thread] tsi::runtime::TsavRT::deallocate (cumulative over all threads)\n------------------------------------------------------------------------------------------------------------------------\n1395    14.2460    0.0102     14.2460  [3.23e-01%] [Thread] tsi::runtime::TsavRT::deallocate\n========================================================================================================================\n-  4407.4100    0.0000   4407.4100  [100.00%] TOTAL\n========================================================================================================================\n\nCounter Metrics:\n------------------------------------------------------------------------------------------------------------------------\nMetric                                    Min            Max            Avg\n------------------------------------------------------------------------------------------------------------------------\nQueue_0_Occupancy                      0.0000         1.0000         0.9971\n------------------------------------------------------------------------------------------------------------------------\n\n"
-
 @app.route('/_app', methods=['POST', 'GET'])
 @app.route('/api/chats', methods=['POST', 'GET'])
 def chats():
     global job_status
     global parameters
 
-    #serial_script.pre_and_post_check(port,baudrate)
+    serial_script.pre_and_post_check(port,baudrate)
     
     data = request.get_json()
     
@@ -440,47 +437,44 @@ def chats():
     #]
     script_path = "./run_llama_cli.sh"
     command = f"cd {exe_path}; {script_path} \"{prompt}\" {tokens} {model_path} {backend} {repeat_penalty} {batch_size} {top_k} {top_p} {last_n} {context_length} {temp}"
-    #def run_script(command):
-    #    try:
-    #        is_job_running()
-    #        job_status["running"] = True
-    #        result = serial_script.send_serial_command(port,baudrate,command)
-    #        if result:
-    #            response_text = result
-    #            start_phrase = "llama_perf_sampler_print: "
-    #            if start_phrase in response_text:
-    #                filtered_text = response_text.split(start_phrase, 1)[0] # Split once and drop the second part
-    #                formatted_text = response_text.split(start_phrase, 1)[1]
-    #            else:
-    #                filtered_text = result
-    #        else:
-    #            filtered_text = "Result Empty: Desired phrase not found in the response."
-    #            job_status["result"] = filtered_text
+    def run_script(command):
+        try:
+            is_job_running()
+            job_status["running"] = True
+            result = serial_script.send_serial_command(port,baudrate,command)
+            if result:
+                response_text = result
+                start_phrase = "llama_perf_sampler_print: "
+                if start_phrase in response_text:
+                    filtered_text = response_text.split(start_phrase, 1)[0] # Split once and drop the second part
+                    formatted_text = response_text.split(start_phrase, 1)[1]
+                else:
+                    filtered_text = result
+            else:
+                filtered_text = "Result Empty: Desired phrase not found in the response."
+                job_status["result"] = filtered_text
 
-     #       job_status["running"] = False
-     #       return filtered_text, formatted_text
-     #   except subprocess.CalledProcessError as e:
-     #       filtered_text = f"Error: {e.stderr}"
-     #       job_status["result"] = filtered_text
-     #       job_status["running"] = False
-     #   return filtered_text, formatted_text
+            job_status["running"] = False
+            return filtered_text, formatted_text
+        except subprocess.CalledProcessError as e:
+            filtered_text = f"Error: {e.stderr}"
+            job_status["result"] = filtered_text
+            job_status["running"] = False
+        return filtered_text, formatted_text
 
-    #filtered_text, profile_text = run_script(command)
-    #extracted_json = extract_json_output(filtered_text)
-    #chat_history = extract_chat_history(filtered_text)
-    #final_chat_output = extract_final_output_after_chat_history(chat_history)
+    filtered_text, profile_text = run_script(command)
+    extracted_json = extract_json_output(filtered_text)
+    chat_history = extract_chat_history(filtered_text)
+    final_chat_output = extract_final_output_after_chat_history(chat_history)
     json_string ={
             "status": "success",
             "model": "ollama",
             "message": {
-                #"content": final_chat_output,
-                "content": "test Output",
-                "thinking": "test History",
-                #"thinking": chat_history,
+                "content": final_chat_output,
+                "thinking": chat_history,
                 "tool_calls": None,
                 "openai_tool_calls": None,
-                #"meta": profile_text
-                "meta": perf_text
+                "meta": profile_text
                 },
             "user": {
                 "name": "Alice",
@@ -503,7 +497,7 @@ def chat():
     global job_status
     global parameters
 
-    #serial_script.pre_and_post_check(port,baudrate)
+    serial_script.pre_and_post_check(port,baudrate)
     
     data = request.get_json()
 
@@ -555,47 +549,44 @@ def chat():
     #]
     script_path = "./run_llama_cli.sh"
     command = f"cd {exe_path}; {script_path} \"{prompt}\" {tokens} {model_path} {backend} {repeat_penalty} {batch_size} {top_k} {top_p} {last_n} {context_length} {temp}"
-    #def run_script(command):
-    #    try:
-    #        is_job_running()
-    #        job_status["running"] = True
-    #        result = serial_script.send_serial_command(port,baudrate,command)
-    #        if result:
-    #            response_text = result
-    #            start_phrase = "llama_perf_sampler_print: "
-    #            if start_phrase in response_text:
-    #                filtered_text = response_text.split(start_phrase, 1)[0] # Split once and drop the second part
-    #                formatted_text = response_text.split(start_phrase, 1)[1]
-    #            else:
-    #                filtered_text = result
-    #                formatted_text = None
-    #        else:
-    #            filtered_text = "Result Empty: Desired phrase not found in the response."
-    #            job_status["result"] = filtered_text
+    def run_script(command):
+        try:
+            is_job_running()
+            job_status["running"] = True
+            result = serial_script.send_serial_command(port,baudrate,command)
+            if result:
+                response_text = result
+                start_phrase = "llama_perf_sampler_print: "
+                if start_phrase in response_text:
+                    filtered_text = response_text.split(start_phrase, 1)[0] # Split once and drop the second part
+                    formatted_text = response_text.split(start_phrase, 1)[1]
+                else:
+                    filtered_text = result
+                    formatted_text = None
+            else:
+                filtered_text = "Result Empty: Desired phrase not found in the response."
+                job_status["result"] = filtered_text
 
-    #        job_status["running"] = False
-    #        return filtered_text, formatted_text
-    #    except subprocess.CalledProcessError as e:
-    #        filtered_text = f"Error: {e.stderr}"
-    #        job_status["result"] = filtered_text
-    #        job_status["running"] = False
-    #    return filtered_text, formatted_text
+            job_status["running"] = False
+            return filtered_text, formatted_text
+        except subprocess.CalledProcessError as e:
+            filtered_text = f"Error: {e.stderr}"
+            job_status["result"] = filtered_text
+            job_status["running"] = False
+        return filtered_text, formatted_text
 
-    #filtered_text, profile_text = run_script(command)
-    #extracted_json = extract_json_output(filtered_text)
-    #chat_history = extract_chat_history(filtered_text)
-    #final_chat_output = extract_final_output_after_chat_history(chat_history)
+    filtered_text, profile_text = run_script(command)
+    extracted_json = extract_json_output(filtered_text)
+    chat_history = extract_chat_history(filtered_text)
+    final_chat_output = extract_final_output_after_chat_history(chat_history)
     json_string ={
             "status": "success",
             "model": "ollama",
             "message": {
-                #"content": final_chat_output,
-                "content": "final_chat_output",
-                "thinking": "chat_history",
-                #"thinking": chat_history,
+                "content": final_chat_output,
+                "thinking": chat_history,
                 "tool_calls": None,
-                #"meta": profile_text,
-                "meta" : perf_text,
+                "meta": profile_text,
                 "openai_tool_calls": None
                 },
             "user": {

@@ -41,6 +41,39 @@
 			}
 		})();
 	}
+	let usages = [];
+	function extractUsages(obj) {
+		const results = [];
+		function recurse(item) {
+			if (typeof item === 'object' && item !== null) {
+				for (const key in item) {
+					if (key === 'usage') {
+					results.push(item[key]);
+					} else {
+						recurse(item[key]);
+					}
+				}
+			} else if (Array.isArray(item)) {
+				item.forEach(recurse);
+			}
+		}
+		recurse(obj);
+		return results;
+	}
+
+	function handleParse(chatInput) {
+		try {
+			const parsed = typeof chatInput === 'string' ? JSON.parse(chatInput) : chatInput;
+			usages = extractUsages(parsed);
+			console.log(usages);
+		} catch (error) {
+			alert('Invalid JSON input');
+			usages = [];
+		}
+	}
+	$: if (show) {
+		handleParse(chat); // ✅ only call when chat is freshly fetched
+	}
 </script>
 
 <Modal bind:show size="md">
@@ -58,25 +91,22 @@
 		</div>
 
 		{#if chat}
-			<div class="px-5 pt-4 pb-5 w-full flex flex-col justify-center">
-				<div class=" text-sm dark:text-gray-300 mb-1">
-
-				</div>
-
-				<div class="flex justify-end">
-					<div class="flex flex-col items-end space-x-1 mt-3">
-						<div class="flex gap-1">
-							{#if chat.meta}
-								{$i18n.t('++++++chat:')}
-                                                                <pre>{JSON.stringify(chat, null, 2)}</pre>
-								{$i18n.t('++++++chat.meta:')}
-								<pre>{JSON.stringify(chat.meta, null, 2)}</pre>
-							{:else}
-								{$i18n.t('++++++chat.meta!')}
-                                                                <pre>{JSON.stringify(chat, null, 2)}</pre>
-							{/if}
-						</div>
-					</div>
+			<div class="px-5 pt-4 pb-5 w-full flex flex-col text-left justify-center">
+				<div class="w-full flex flex-col space-y-4 text-left">
+					{#if usages.length > 0}
+						{#each usages as usage, i}
+							<pre class="text-left"><strong  class="block mb-2">Message #{i + 1}:</strong></pre>
+							<div class="grid grid-cols-2 gap-x-6 gap-y-2 border rounded p-4 bg-gray-50">
+								{#each Object.entries(usage) as [key, value]}
+									<div class="font-medium text-left text-gray-700">{key}</div>
+									<div class="text-gray-900 text-left">{String(value)}</div>
+								{/each}
+							</div>
+						{/each}
+					{:else}
+						<p>No usage blocks found yet.</p>
+						<pre>{JSON.stringify(chat, null, 2)}</pre>
+					{/if}
 				</div>
 			</div>
 		{/if}
