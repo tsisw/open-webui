@@ -377,7 +377,8 @@ def manual_response(status="sucess",model="ollama",content=None,thinking=None,to
                 "content": content,
                 "thinking": thinking,
                 "tool_calls": tool_calls,
-                "openai_tool_calls": openai_tool_calls
+                "openai_tool_calls": openai_tool_calls,
+                "meta": profile_data
                 },
             "user": {
                 "name": name,
@@ -388,7 +389,8 @@ def manual_response(status="sucess",model="ollama",content=None,thinking=None,to
             "data": {
                 "some_key": some_key,
                 "profile_data": profile_data
-                }
+                },
+            "done": True
             }
     print("Response:\n", json.dumps(json_string), "\n")
     response = make_response(json.dumps(json_string))
