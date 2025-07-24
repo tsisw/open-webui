@@ -390,7 +390,7 @@ def manual_response(status="sucess",model="ollama",content=None,thinking=None,to
                 "some_key": some_key,
                 "profile_data": profile_data
                 },
-            "done": True
+            "done": True #This is to indicate that we are one command at a time, not interactive
             }
     print("Response:\n", json.dumps(json_string), "\n")
     response = make_response(json.dumps(json_string))

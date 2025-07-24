@@ -297,7 +297,7 @@
 				</DropdownMenu.Item>
 			{/if}
 
-                        {#if $user?.role === 'admin' || ($user.permissions?.chat?.share ?? true)}
+                        {#if $user?.role === 'admin' || ($user.permissions?.chat?.control ?? true)}
                                 <DropdownMenu.Item
                                         class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800  rounded-md"
                                         on:click={() => {
