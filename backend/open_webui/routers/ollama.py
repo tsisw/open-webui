@@ -752,7 +752,7 @@ async def pull_model(
     payload = {**form_data, "insecure": True}
     
     
-    experiment = await send_post_request(
+    original_post_request = await send_post_request(
         url=f"{url}/api/pull",
         payload=json.dumps(payload),
         key=get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS),
@@ -760,7 +760,7 @@ async def pull_model(
     )
     
     GOLDEN_NAME = None
-    async for line in experiment.body_iterator:
+    async for line in original_post_request.body_iterator:
         decoded = line.decode("utf-8")
         if GOLDEN_NAME == None:
             data = json.loads(decoded)
@@ -774,7 +774,7 @@ async def pull_model(
     
     await pull_model_helper(user,GOLDEN_NAME)
 
-    return experiment
+    return original_post_request
 
 
 class PushModelForm(BaseModel):
