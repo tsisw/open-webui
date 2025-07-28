@@ -10,6 +10,8 @@
 
 	import { splitStream } from '$lib/utils';
 	import Selector from '$lib/components/chat/ModelSelector/Selector.svelte';
+	import MenuLines from '../icons/MenuLines.svelte';
+	import abortTaskOpu from '../chat/Controls/Controls.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -32,6 +34,7 @@
 	};
 
 	const stopResponse = () => {
+		abortTaskOpu();
 		stopResponseFlag = true;
 		console.log('stopResponse');
 	};
