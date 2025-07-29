@@ -211,7 +211,7 @@ def actual_transfer(file):
             time.sleep(1) 
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
             process = subprocess.Popen(["./copy2fpga-x86.sh", filename], text=True)  
-            process.wait()
+            process.wait(timeout=100)
             print("Starting copy2fpga-x86 and sending file..." )
             time.sleep(1) 
             
@@ -219,22 +219,25 @@ def actual_transfer(file):
 
 @app.route('/api/receive', methods=['GET', 'POST'])
 def receive_pull_model():
+
     data = request.get_json()
-
-    if os.path.exists("/var/snap/ollama/common/models/blobs/"):
-        path = "/var/snap/ollama/common/models/blobs/" + data['actual_name']
-    else:
-        path = "/usr/share/ollama/.ollama/models/blobs/" + data['actual_name']
-
-    file_obj = open(path, "rb")
-    upload = FileStorage(stream=file_obj, filename=data['actual_name'], content_type="application/octet-stream")
 
     time.sleep(1)
     
     read_cmd_from_serial(port,baudrate,f"cd {destn_path}; rm {data['human_name']}")
     
     time.sleep(1)
-    
+
+    if os.path.exists("/var/snap/ollama/common/models/blobs/"):
+        path = "/var/snap/ollama/common/models/blobs/" + data['actual_name']
+    elif os.path.exists("/usr/share/ollama/.ollama/models/blobs/"):
+        path = "/usr/share/ollama/.ollama/models/blobs/" + data['actual_name']
+    else:
+        return "No valid filepath found"
+
+    file_obj = open(path, "rb")
+    upload = FileStorage(stream=file_obj, filename=data['actual_name'], content_type="application/octet-stream")
+
     actual_transfer(upload)
     
     time.sleep(1)
