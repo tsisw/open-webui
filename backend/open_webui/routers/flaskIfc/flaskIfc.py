@@ -211,7 +211,7 @@ def actual_transfer(file):
             time.sleep(1) 
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
             process = subprocess.Popen(["./copy2fpga-x86.sh", filename], text=True)  
-            process.wait(timeout=100)
+            process.wait(timeout=5000)
             print("Starting copy2fpga-x86 and sending file..." )
             time.sleep(1) 
             
