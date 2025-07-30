@@ -616,6 +616,7 @@ def chat():
                     formatted_text = None
             else:
                 filtered_text = "Result Empty: Desired phrase not found in the response."
+                formatted_text = None
                 job_status["result"] = filtered_text
 
             job_status["running"] = False
