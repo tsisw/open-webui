@@ -483,6 +483,7 @@ def chats():
     serial_script.pre_and_post_check(port,baudrate)
     
     data = request.get_json()
+    print("Request:", data)
     if 'options' in data:
         for item in parameters:
             if item in data['options']:
@@ -575,7 +576,7 @@ def chat():
     serial_script.pre_and_post_check(port,baudrate)
     
     data = request.get_json()
-
+    print("Request:", data)
     if 'options' in data:
         for item in parameters:
             if item in data['options']:
