@@ -206,14 +206,18 @@ def actual_transfer(file):
                      job_status["running"] = False
             thread = threading.Thread(target=scriptRecvFromHost)
             job_status = {"running": True, "result": "", "thread": thread}
-            thread.start()
             
             time.sleep(1) 
+
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            process = subprocess.Popen(["./copy2fpga-x86.sh", filename], text=True)  
-            process.wait(timeout=5000)
-            print("Starting copy2fpga-x86 and sending file..." )
-            time.sleep(1) 
+
+            time.sleep(1)
+            
+            process = subprocess.Popen(["./copy2fpga-x86.sh", filename], text=True)
+            
+            thread.start()
+            
+            thread.join()
             
             
 
@@ -234,9 +238,16 @@ def receive_pull_model():
         path = "/usr/share/ollama/.ollama/models/blobs/" + data['actual_name']
     else:
         return "No valid filepath found"
+    
+    time.sleep(1)
 
     file_obj = open(path, "rb")
+    
+    time.sleep(1)
+
     upload = FileStorage(stream=file_obj, filename=data['actual_name'], content_type="application/octet-stream")
+
+    time.sleep(1)
 
     actual_transfer(upload)
     
@@ -247,6 +258,8 @@ def receive_pull_model():
     time.sleep(1)
 
     read_cmd_from_serial(port,baudrate,f"cd {destn_path}; ls -lt")
+
+    time.sleep(1)
 
     return manual_response(content="File Download Done",thinking="File Download Done",), 200
 
