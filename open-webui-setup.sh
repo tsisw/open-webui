@@ -10,6 +10,7 @@ curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
 uv pip install -r backend/requirements.txt
 pip install npm
 sudo apt install npm
+sudo pip install portalocker
 node -v
 npm -v
 export WEBUI_NAME="TSI WebUI"
