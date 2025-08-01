@@ -189,7 +189,10 @@ def actual_transfer(file):
         # Save the file if it exists
         if file:
             filename = file.filename #secure_filename(file.filename)
-            process = subprocess.Popen(["./copy2fpga-setup.sh"], text=True)
+            try:
+                process = subprocess.Popen(["./copy2fpga-setup.sh"], text=True)
+            except Exception as e:
+                return f"File-transfer setup failed: {e}", 500
             stdout, stderr = process.communicate()
             script_path = "./recvFromHost "
             command = f"cd {exe_path}; {script_path} {destn_path}{filename}"
@@ -209,15 +212,23 @@ def actual_transfer(file):
             
             time.sleep(1) 
 
-            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            try:
+                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename)) #ADD TRY HERE
+            except Exception as e:
+                return f"File open failed: {e}", 500
 
             time.sleep(1)
             
-            process = subprocess.Popen(["./copy2fpga-x86.sh", filename], text=True)
+            try:
+                process = subprocess.Popen(["./copy2fpga-x86.sh", filename], text=True) #ADD TRY HERE
+            except Exception as e:
+                return f"copy2fpga-x86.sh failed: {e}", 500
             
             thread.start()
             
             thread.join()
+
+            
             
             
 
@@ -225,6 +236,12 @@ def actual_transfer(file):
 def receive_pull_model():
 
     data = request.get_json()
+
+    try:
+        test1 = data['human_name']
+        test2 = data['actual_name']
+    except (TypeError, KeyError) as e:
+        return f"Invalid JSON data: {e}", 400
 
     time.sleep(1)
     
@@ -241,15 +258,24 @@ def receive_pull_model():
     
     time.sleep(1)
 
-    file_obj = open(path, "rb")
+    try:
+        file_obj = open(path, "rb")
+    except Exception as e:
+        return f"File open failed: {e}", 500
     
     time.sleep(1)
 
-    upload = FileStorage(stream=file_obj, filename=data['actual_name'], content_type="application/octet-stream")
+    try:
+        upload = FileStorage(stream=file_obj, filename=data['actual_name'], content_type="application/octet-stream")
+    except Exception as e:
+        return f"File object creation failed: {e}", 500
 
     time.sleep(1)
 
-    actual_transfer(upload)
+    try:
+        actual_transfer(upload)
+    except Exception as e:
+        return f"File transfer failed: {e}", 500
     
     time.sleep(1)
 
@@ -260,6 +286,28 @@ def receive_pull_model():
     read_cmd_from_serial(port,baudrate,f"cd {destn_path}; ls -lt")
 
     time.sleep(1)
+
+    target_check_sum = serial_script.send_serial_command(port,baudrate,f"cd {destn_path}; md5sum {data['human_name']}")
+    
+    try:
+        host_check_sum = subprocess.run(["md5sum", path],capture_output=True,text=True,check=True)
+    except Exception as e:
+        return f"Md5sum failed: {e}", 500 
+
+    time.sleep(1)
+
+    
+    print('TARGET CHECK-SUM: ', target_check_sum)
+    print('HOST/SHELL CHECK-SUM: ', host_check_sum.stdout)
+
+    if target_check_sum.split()[0] != host_check_sum.stdout.split()[0]:
+        print(target_check_sum.split()[0])
+        print(host_check_sum.stdout.split()[0])
+        print(target_check_sum.split()[0] != host_check_sum.stdout.split()[0])
+        return "CHECKSUM ISSUE"
+
+
+
 
     return manual_response(content="File Download Done",thinking="File Download Done",), 200
 
