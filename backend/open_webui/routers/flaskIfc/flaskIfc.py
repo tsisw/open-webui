@@ -322,7 +322,7 @@ def internal_restart_txe():
     try:
         for line in process.stdout:
             print("HOST:" + line)
-            if "Global Reset exercised" in line:
+            if "Global Reset exercised" in line or "release chip from reset called" in line:
                 time.sleep(2)
                 os.killpg(os.getpgid(process.pid), signal.SIGTERM)
                 break
