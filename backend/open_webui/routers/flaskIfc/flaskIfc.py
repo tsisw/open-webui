@@ -305,11 +305,7 @@ def receive_pull_model():
     print('HOST/SHELL CHECK-SUM: ', host_check_sum.stdout)
 
     if target_check_sum.split()[0].replace('\x00', '') != host_check_sum.stdout.split()[0].replace('\x00', ''):
-        print(repr(target_check_sum.split()[0]))
-        print(repr(host_check_sum.stdout.split()[0]))
-        print(type(target_check_sum.split()[0]))
-        print(type(host_check_sum.stdout.split()[0]))
-        print(target_check_sum.split()[0] != host_check_sum.stdout.split()[0])
+        
         return manual_response(content="Failed checksum match",thinking="Failed checksum match"), 500
     
 

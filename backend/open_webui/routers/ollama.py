@@ -1854,7 +1854,7 @@ async def download_model(
     url_idx: Optional[int] = None,
     user=Depends(get_admin_user),
 ):
-    print('DOWNLOAD_MODEL IS BEING CALLED!!!')
+    
     allowed_hosts = ["https://huggingface.co/", "https://github.com/"]
 
     if not any(form_data.url.startswith(host) for host in allowed_hosts):
@@ -1887,7 +1887,7 @@ async def upload_model(
     url_idx: Optional[int] = None,
     user=Depends(get_admin_user),
 ):
-    print('UPLOAD_MODEL IS BEING CALLED!!!')
+    
     if url_idx is None:
         url_idx = 0
     ollama_url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
