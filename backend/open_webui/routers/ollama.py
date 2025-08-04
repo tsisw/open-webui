@@ -731,6 +731,7 @@ async def pull_model_helper(user=Depends(get_admin_user),gold:str = '',human_nam
         payload=json.dumps(payload),
         stream=False,
         key=None,
+        content_type = "application/x-ndjson",
         user=user,
     )
     
@@ -755,6 +756,7 @@ async def pull_model(
     
     print('URL in original_request: ', f"{url}/api/pull")
 
+    
     original_post_request = await send_post_request(
         url=f"{url}/api/pull",
         payload=json.dumps(payload),
@@ -762,7 +764,7 @@ async def pull_model(
         user=user,
     )
 
-    
+    #async def test(original_post_request):
     
     GOLDEN_NAME = None
     print('HUMAN MODEL NAME: ',form_data["model"])
@@ -782,9 +784,11 @@ async def pull_model(
     
     result = await pull_model_helper(user,GOLDEN_NAME,form_data["model"])
     
-    
+    print('RESULT: ', result)
 
-    return original_post_request
+    return result
+    #syncio.create_task(test(original_post_request))
+    #return original_post_request
 
 
 class PushModelForm(BaseModel):

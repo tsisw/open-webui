@@ -13,6 +13,9 @@ import serial_script
 import re
 from werkzeug.datastructures import FileStorage
 from werkzeug.utils import secure_filename
+import tkinter as tk
+from tkinter import messagebox
+
 
 
 
@@ -190,7 +193,7 @@ def actual_transfer(file):
         if file:
             filename = file.filename #secure_filename(file.filename)
             try:
-                process = subprocess.Popen(["./copy2fpga-setup.sh"], text=True)
+                process = subprocess.Popen(["./copy2fpga-setup.sh"], text=True) #subprocess.run(["./copy2fpga-setup.sh"], text=True, capture_output=True) 
             except Exception as e:
                 return f"File-transfer setup failed: {e}", 500
             stdout, stderr = process.communicate()
@@ -213,14 +216,14 @@ def actual_transfer(file):
             time.sleep(1) 
 
             try:
-                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename)) #ADD TRY HERE
+                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename)) 
             except Exception as e:
                 return f"File open failed: {e}", 500
 
             time.sleep(1)
             
             try:
-                process = subprocess.Popen(["./copy2fpga-x86.sh", filename], text=True) #ADD TRY HERE
+                process = subprocess.Popen(["./copy2fpga-x86.sh", filename], text=True) #subprocess.run(["./copy2fpga-x86.sh", filename], text=True, capture_output=True)
             except Exception as e:
                 return f"copy2fpga-x86.sh failed: {e}", 500
             
@@ -297,19 +300,20 @@ def receive_pull_model():
     time.sleep(1)
 
     
+    
     print('TARGET CHECK-SUM: ', target_check_sum)
     print('HOST/SHELL CHECK-SUM: ', host_check_sum.stdout)
 
-    if target_check_sum.split()[0] != host_check_sum.stdout.split()[0]:
-        print(target_check_sum.split()[0])
-        print(host_check_sum.stdout.split()[0])
+    if target_check_sum.split()[0].replace('\x00', '') != host_check_sum.stdout.split()[0].replace('\x00', ''):
+        print(repr(target_check_sum.split()[0]))
+        print(repr(host_check_sum.stdout.split()[0]))
+        print(type(target_check_sum.split()[0]))
+        print(type(host_check_sum.stdout.split()[0]))
         print(target_check_sum.split()[0] != host_check_sum.stdout.split()[0])
-        return "CHECKSUM ISSUE"
+        return manual_response(content="Failed checksum match",thinking="Failed checksum match"), 500
+    
 
-
-
-
-    return manual_response(content="File Download Done",thinking="File Download Done",), 200
+    return manual_response(content="File Download Done",thinking="File Download Done"), 200
 
 
 #    command = f"upload file"
