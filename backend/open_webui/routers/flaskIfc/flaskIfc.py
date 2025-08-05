@@ -303,10 +303,10 @@ def receive_pull_model():
     
     print('TARGET CHECK-SUM: ', target_check_sum)
     print('HOST/SHELL CHECK-SUM: ', host_check_sum.stdout)
-
+    
     if target_check_sum.split()[0].replace('\x00', '') != host_check_sum.stdout.split()[0].replace('\x00', ''):
         
-        return manual_response(content="Failed checksum match",thinking="Failed checksum match"), 500
+        return manual_response(content="Failed checksum match",thinking="Failed checksum match"), 400
     
 
     return manual_response(content="File Download Done",thinking="File Download Done"), 200
