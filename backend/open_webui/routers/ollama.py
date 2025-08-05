@@ -757,6 +757,7 @@ async def pull_model(
     print('URL in original_request: ', f"{url}/api/pull")
 
     
+    
     original_post_request = await send_post_request(
         url=f"{url}/api/pull",
         payload=json.dumps(payload),
@@ -764,29 +765,47 @@ async def pull_model(
         user=user,
     )
 
-    #async def test(original_post_request):
     
+    
+
+   
+    async def pull_model_helper_stream(user, key, model_name):
+        yield json.dumps({"status": "IGNORE ABOVE MESSAGE"}) + "\n"
+        result_response = await pull_model_helper(user, key, model_name)
+        yield json.dumps({"result": result_response}) + "\n"
+
+
+
     GOLDEN_NAME = None
-    print('HUMAN MODEL NAME: ',form_data["model"])
-    async for line in original_post_request.body_iterator:
-        decoded = line.decode("utf-8")
-        if GOLDEN_NAME == None:
-            data = json.loads(decoded)
-            if "digest" in data:
-                GOLDEN_NAME = data["digest"]
+    async def stream():
+        nonlocal GOLDEN_NAME
+        print('HUMAN MODEL NAME: ',form_data["model"])
+        async for line in original_post_request.body_iterator:
+            decoded = line.decode("utf-8")
+            if GOLDEN_NAME == None:
+                data = json.loads(decoded)
+                if "digest" in data:
+                    GOLDEN_NAME = data["digest"]
+            yield line
+            print(decoded,'')  # or buffer it, write to file, etc.
+        if GOLDEN_NAME:
+            key = '-'.join(GOLDEN_NAME.split(':'))
+            async for output in pull_model_helper_stream(user, key, form_data["model"]):
+                print('EXPERIMENT!!!!')
+                print(output.encode(),type(output.encode()))
+                yield output#.encode()
 
-        print(decoded,'')  # or buffer it, write to file, etc.
-    
-    GOLDEN_NAME = '-'.join(GOLDEN_NAME.split(':'))
-    print(GOLDEN_NAME) #sha-key
-    
 
-    
-    result = await pull_model_helper(user,GOLDEN_NAME,form_data["model"])
-    
-    print('RESULT: ', result)
 
-    return result
+
+    async def A():
+        response = StreamingResponse(stream(), media_type="application/json")
+        return response
+
+    f = await A()
+    
+    return f
+
     #syncio.create_task(test(original_post_request))
     #return original_post_request
 
