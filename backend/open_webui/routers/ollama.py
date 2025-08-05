@@ -755,25 +755,20 @@ async def pull_model(
     payload = {**form_data, "insecure": True}
     
     print('URL in original_request: ', f"{url}/api/pull")
+
     
-    '''
-    GOLDEN_NAME = 'example'
-    async def helper():
-        nonlocal GOLDEN_NAME
-        return await send_post_request(url=f"{url}/api/pull",payload=json.dumps(payload),key=get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS),user=user,)
-    '''   
+    
     original_post_request = await send_post_request(
         url=f"{url}/api/pull",
         payload=json.dumps(payload),
         key=get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS),
         user=user,
     )
-    
-    '''
-    original_post_request = await helper()
 
-    #async def test(original_post_request):
-    '''
+    
+    
+
+   
     async def pull_model_helper_stream(user, key, model_name):
         yield json.dumps({"status": "IGNORE ABOVE MESSAGE"}) + "\n"
         result_response = await pull_model_helper(user, key, model_name)
@@ -808,25 +803,9 @@ async def pull_model(
         return response
 
     f = await A()
-    '''
-    print('IT DOESNT STOPASDFJADSOGFWEOHGAEWOHGAERIHGAERIHGAEWR')
-    async def B():
-
-        nonlocal GOLDEN_NAME
-
-        GOLDEN_NAME = '-'.join(GOLDEN_NAME.split(':'))
-        #print(GOLDEN_NAME) #sha-key
-        
-        
-        
-        
-        result = await pull_model_helper(user,GOLDEN_NAME,form_data["model"])
-        
-        print('RESULT: ', result)
-
-    asyncio.create_task(B())
-    '''
+    
     return f
+
     #syncio.create_task(test(original_post_request))
     #return original_post_request
 
