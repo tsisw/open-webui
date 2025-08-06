@@ -761,11 +761,12 @@ async def pull_model(
         user=user,
     )
 
+
     async def pull_model_helper_stream(user, key, model_name):
         yield json.dumps({"status": "IGNORE ABOVE MESSAGE"}) + "\n"
         result_response = await pull_model_helper(user, key, model_name)
         yield json.dumps({"result": result_response}) + "\n"
-
+        
     GOLDEN_NAME = None
     async def stream():
         nonlocal GOLDEN_NAME
@@ -786,9 +787,8 @@ async def pull_model(
     async def userInterface():
         response = StreamingResponse(stream(), media_type="application/json")
         return response
-    
+      
     return await userInterface()
-
 
 
 class PushModelForm(BaseModel):
