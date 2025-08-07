@@ -456,6 +456,7 @@ async def get_ollama_tags(
     request: Request, url_idx: Optional[int] = None, user=Depends(get_verified_user)
 ):
     models = []
+    print("ANOOP API TAGS")
 
     if url_idx is None:
         models = await get_all_models(request, user=user)
@@ -573,6 +574,7 @@ async def get_ollama_loaded_models(request: Request, user=Depends(get_admin_user
 @router.get("/api/version")
 @router.get("/api/version/{url_idx}")
 async def get_ollama_versions(request: Request, url_idx: Optional[int] = None):
+    print("ANOOP API VERSION")
     if request.app.state.config.ENABLE_OLLAMA_API:
         if url_idx is None:
             # returns lowest version
@@ -844,6 +846,7 @@ async def create_model(
     url_idx: int = 0,
     user=Depends(get_admin_user),
 ):
+    print("ANOOP API CREATE")
     log.debug(f"form_data: {form_data}")
     url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
 
@@ -1428,7 +1431,10 @@ async def generate_chat_completion(
     if prefix_id:
         payload["model"] = payload["model"].replace(f"{prefix_id}.", "")
 
-    return await send_post_request(
+    print("ANOOP CHAT MESSAGE HAS COME")  # DEBUG
+    logging.info("Payload being sent: %s", json.dumps(payload, indent=2))
+
+    response = await send_post_request(
         url=f"{url}/api/chat",
         payload=json.dumps(payload),
         stream=form_data.stream,
@@ -1438,6 +1444,57 @@ async def generate_chat_completion(
         metadata=metadata,
     )
 
+    # ✅ FIXED: Handle both streaming and non-streaming responses
+    if form_data.stream:
+        async def stream_and_log():
+            async for line in response.body_iterator:
+                decoded = line.decode("utf-8").strip()
+                logging.info("ANOOP STREAMED LINE: %s", decoded)
+                yield line  # Preserve original stream for frontend
+
+        return StreamingResponse(
+            stream_and_log(),
+            media_type="text/event-stream"
+        )
+    else:
+        try:
+            if isinstance(response, dict):
+                logging.info("ANOOP NON-STREAMED RESPONSE-0: %s", response)
+                return response
+            else:
+                data = await response.json()
+                logging.info("ANOOP NON-STREAMED JSON RESPONSE: %s", data)
+                return data
+
+        except Exception as e:
+            log.exception("Failed to parse non-streaming response")
+            raise HTTPException(status_code=500, detail="Invalid response format")
+
+     #Send the request and capture the response
+    #response = await send_post_request(
+    #    url=f"{url}/api/chat",
+    #    payload=json.dumps(payload),
+    #    stream=form_data.stream,
+    #    key=get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS),
+    #    content_type="application/x-ndjson",
+    #    user=user,
+    #    metadata=metadata,
+    #)
+
+    # Dump the response
+    #logging.info("Response received: %s", response)
+
+    #streamed_data = []
+    #async for line in response.body_iterator:
+    #    streamed_data.append(line.decode("utf-8").strip())
+
+    #logging.info("ANOOP Full streamed response: %s", streamed_data)
+
+
+    ## Return the response
+    #return response
+
+
 @router.post("/api/restartopu")
 async def restart_opu(
     request: Request,
@@ -1446,6 +1503,7 @@ async def restart_opu(
     user=Depends(get_verified_user),
     bypass_filter: Optional[bool] = False,
 ):
+    print("ANOOP API RESTART")
     url = DEFAULT_FLASK_URL
     return await send_post_request(
         url=f"{url}/api/restart-txe",
@@ -1500,6 +1558,7 @@ async def aborttask_opu(
     user=Depends(get_verified_user),
     bypass_filter: Optional[bool] = False,
 ):
+    print("ANOOP API ABORT")
     url = DEFAULT_FLASK_URL
     return await send_post_request(
         url=f"{url}/api/abort-task",
@@ -1545,6 +1604,7 @@ async def generate_openai_completion(
     url_idx: Optional[int] = None,
     user=Depends(get_verified_user),
 ):
+    print("ANOOP VI COmpletions")
     metadata = form_data.pop("metadata", None)
 
     try:
@@ -1624,6 +1684,7 @@ async def generate_openai_chat_completion(
     url_idx: Optional[int] = None,
     user=Depends(get_verified_user),
 ):
+    print("ANOOP VI CHAT COmpletions")
     metadata = form_data.pop("metadata", None)
 
     try:

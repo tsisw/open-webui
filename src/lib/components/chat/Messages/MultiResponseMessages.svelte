@@ -1,4 +1,5 @@
 <script lang="ts">
+        console.log("✅ MultiResponseMessages.svelte loaded");
 	import dayjs from 'dayjs';
 	import { onMount, tick, getContext } from 'svelte';
 	import { createEventDispatcher } from 'svelte';
@@ -188,6 +189,7 @@
 		await tick();
 	};
 
+        console.log("🚀 Calling mergeResponses with", messageId, responses, chatId);
 	const mergeResponsesHandler = async () => {
 		const responses = Object.keys(groupedMessageIds).map((modelIdx) => {
 			const { messageIds } = groupedMessageIds[modelIdx];

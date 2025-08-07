@@ -91,7 +91,20 @@
 				{addMessages}
 				{readOnly}
 			/>
-		{:else}
+		{:else if (history.messages[messageId]?.followups || (history.messages[history.messages[messageId].parentId]?.models?.length ?? 1) !== 1)}
+                   
+{#if history.messages[messageId]?.title}
+        <div class="text-sm font-semibold text-blue-600 mb-2">
+            🏷️ {history.messages[messageId].title}
+        </div>
+    {/if}
+
+    {#if history.messages[messageId]?.tags?.length}
+        <div class="text-xs text-gray-500 mb-2">
+            Tags: {history.messages[messageId].tags.join(', ')}
+        </div>
+    {/if}
+
 			<MultiResponseMessages
 				bind:history
 				{chatId}

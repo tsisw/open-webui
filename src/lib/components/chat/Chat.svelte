@@ -1943,51 +1943,99 @@
 	};
 
 	const mergeResponses = async (messageId, responses, _chatId) => {
-		console.log('mergeResponses', messageId, responses);
-		const message = history.messages[messageId];
-		const mergedResponse = {
-			status: true,
-			content: ''
-		};
-		message.merged = mergedResponse;
-		history.messages[messageId] = message;
+    console.log('mergeResponses', messageId, responses);
+    const message = history.messages[messageId];
+    const mergedResponse = {
+        status: true,
+        content: ''
+    };
+    message.merged = mergedResponse;
+    history.messages[messageId] = message;
 
-		try {
-			const [res, controller] = await generateMoACompletion(
-				localStorage.token,
-				message.model,
-				history.messages[message.parentId].content,
-				responses
-			);
+    try {
+        const [res, controller] = await generateMoACompletion(
+            localStorage.token,
+            message.model,
+            history.messages[message.parentId].content,
+            responses
+        );
 
-			if (res && res.ok && res.body) {
-				const textStream = await createOpenAITextStream(res.body, $settings.splitLargeChunks);
-				for await (const update of textStream) {
-					const { value, done, sources, error, usage } = update;
-					if (error || done) {
-						break;
-					}
+        if (res && res.ok && res.body) {
+            if ($settings.streamResponses) {
+                const textStream = await createOpenAITextStream(res.body, $settings.splitLargeChunks);
+                for await (const update of textStream) {
+                    const { value, done, sources, error, usage } = update;
+                    if (error || done) break;
+                    if (mergedResponse.content == '' && value == '\n') continue;
+                    mergedResponse.content += value;
+                    history.messages[messageId] = {
+                        ...message,
+                        content: mergedResponse.content,
+                        done: true
+                    };
+                }
+            } else {
+                const reader = res.body.getReader();
+                const decoder = new TextDecoder();
+                const { value } = await reader.read();
+                const decoded = decoder.decode(value);
 
-					if (mergedResponse.content == '' && value == '\n') {
-						continue;
-					} else {
-						mergedResponse.content += value;
-						history.messages[messageId] = message;
-					}
+                // Extract follow-ups
+                let followUps = [];
+                try {
+                    const match = decoded.match(/\{[\s\S]*"follow_ups"[\s\S]*\}/);
+                    if (match) {
+                        const parsed = JSON.parse(match[0]);
+                        followUps = parsed.follow_ups ?? [];
+                    }
+                } catch (e) {
+                    console.error("Failed to parse follow-ups:", e);
+                }
 
-					if (autoScroll) {
-						scrollToBottom();
-					}
-				}
+                // Extract title
+                let title = '';
+                try {
+                    const titleMatch = decoded.match(/\{[\s\S]*"title"[\s\S]*\}/);
+                    if (titleMatch) {
+                        const parsed = JSON.parse(titleMatch[0]);
+                        title = parsed.title ?? '';
+                    }
+                } catch (e) {
+                    console.error("Failed to parse title:", e);
+                }
 
-				await saveChatHandler(_chatId, history);
-			} else {
-				console.error(res);
-			}
-		} catch (e) {
-			console.error(e);
-		}
-	};
+                // Extract tags
+                let tags = [];
+                try {
+                    const tagsMatch = decoded.match(/\{[\s\S]*"tags"[\s\S]*\}/);
+                    if (tagsMatch) {
+                        const parsed = JSON.parse(tagsMatch[0]);
+                        tags = parsed.tags ?? [];
+                    }
+                } catch (e) {
+                    console.error("Failed to parse tags:", e);
+                }
+
+                mergedResponse.content = decoded;
+                history.messages[messageId] = {
+                    ...message,
+                    content: mergedResponse.content,
+                    done: true,
+                    followups: followUps,
+                    title,
+                    tags
+                };
+            }
+        }
+    } catch (e) {
+        console.error(e);
+    }
+};
+
+
+
+
+
 
 	const initChatHandler = async (history) => {
 		let _chatId = $chatId;

@@ -26,7 +26,8 @@ baudrate = '921600'
 #baudrate = '115200'
 exe_path = "/usr/bin/tsi/v0.1.1*/bin/"
 
-DEFAULT_MODEL = "TinyLlama:latest"
+#DEFAULT_MODEL = "TinyLlama:latest"
+DEFAULT_MODEL = "tiny-llama"
 DEFAULT_BACKEND = "tSavorite"
 DEFAULT_TOKEN = 12
 DEFAULT_REPEAT_PENALTY = 1.5
@@ -189,10 +190,7 @@ def actual_transfer(file):
         # Save the file if it exists
         if file:
             filename = file.filename #secure_filename(file.filename)
-            try:
-                process = subprocess.Popen(["./copy2fpga-setup.sh"], text=True) #subprocess.run(["./copy2fpga-setup.sh"], text=True, capture_output=True) 
-            except Exception as e:
-                return f"File-transfer setup failed: {e}", 500
+            process = subprocess.Popen(["./copy2fpga-setup.sh"], text=True)
             stdout, stderr = process.communicate()
             script_path = "./recvFromHost "
             command = f"cd {exe_path}; {script_path} {destn_path}{filename}"
@@ -209,26 +207,14 @@ def actual_transfer(file):
                      job_status["running"] = False
             thread = threading.Thread(target=scriptRecvFromHost)
             job_status = {"running": True, "result": "", "thread": thread}
-            
-            time.sleep(1) 
-
-            try:
-                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename)) 
-            except Exception as e:
-                return f"File open failed: {e}", 500
-
-            time.sleep(1)
-            
-            try:
-                process = subprocess.Popen(["./copy2fpga-x86.sh", filename], text=True) #subprocess.run(["./copy2fpga-x86.sh", filename], text=True, capture_output=True)
-            except Exception as e:
-                return f"copy2fpga-x86.sh failed: {e}", 500
-            
             thread.start()
             
-            thread.join()
-
-            
+            time.sleep(1) 
+            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            process = subprocess.Popen(["./copy2fpga-x86.sh", filename], text=True)  
+            process.wait(timeout=5000)
+            print("Starting copy2fpga-x86 and sending file..." )
+            time.sleep(1) 
             
             
 
@@ -236,12 +222,6 @@ def actual_transfer(file):
 def receive_pull_model():
 
     data = request.get_json()
-
-    try:
-        test1 = data['human_name']
-        test2 = data['actual_name']
-    except (TypeError, KeyError) as e:
-        return f"Invalid JSON data: {e}", 400
 
     time.sleep(1)
     
@@ -255,27 +235,11 @@ def receive_pull_model():
         path = "/usr/share/ollama/.ollama/models/blobs/" + data['actual_name']
     else:
         return "No valid filepath found"
-    
-    time.sleep(1)
 
-    try:
-        file_obj = open(path, "rb")
-    except Exception as e:
-        return f"File open failed: {e}", 500
-    
-    time.sleep(1)
+    file_obj = open(path, "rb")
+    upload = FileStorage(stream=file_obj, filename=data['actual_name'], content_type="application/octet-stream")
 
-    try:
-        upload = FileStorage(stream=file_obj, filename=data['actual_name'], content_type="application/octet-stream")
-    except Exception as e:
-        return f"File object creation failed: {e}", 500
-
-    time.sleep(1)
-
-    try:
-        actual_transfer(upload)
-    except Exception as e:
-        return f"File transfer failed: {e}", 500
+    actual_transfer(upload)
     
     time.sleep(1)
 
@@ -285,28 +249,7 @@ def receive_pull_model():
 
     read_cmd_from_serial(port,baudrate,f"cd {destn_path}; ls -lt")
 
-    time.sleep(1)
-
-    target_check_sum = serial_script.send_serial_command(port,baudrate,f"cd {destn_path}; md5sum {data['human_name']}")
-    
-    try:
-        host_check_sum = subprocess.run(["md5sum", path],capture_output=True,text=True,check=True)
-    except Exception as e:
-        return f"Md5sum failed: {e}", 500 
-
-    time.sleep(1)
-
-    
-    
-    print('TARGET CHECK-SUM: ', target_check_sum)
-    print('HOST/SHELL CHECK-SUM: ', host_check_sum.stdout)
-
-    if target_check_sum.split()[0].replace('\x00', '') != host_check_sum.stdout.split()[0].replace('\x00', ''):
-        
-        return manual_response(content="Failed checksum match",thinking="Failed checksum match"), 500
-    
-
-    return manual_response(content="File Download Done",thinking="File Download Done"), 200
+    return manual_response(content="File Download Done",thinking="File Download Done",), 200
 
 
 #    command = f"upload file"
@@ -472,6 +415,7 @@ def manual_response(status="success",model="ollama",content=None,thinking=None,t
                 },
             "data": {
                 "some_key": some_key,
+                "profile_data": profile_data
                 },
             "done": True #This is to indicate that we are one command at a time, not interactive
             }
@@ -560,6 +504,7 @@ def chats():
     if 'model' in data:
         model = data['model']
 
+    model = DEFAULT_MODEL
     tokens = parameters['num_predict']
     repeat_penalty = parameters['repeat_penalty']
     batch_size = parameters['num_batch']
@@ -652,6 +597,7 @@ def chat():
         backend = 'tSavorite'
     if 'model' in data:
         model = data['model']
+    model = DEFAULT_MODEL
 
     tokens = parameters['num_predict']
     repeat_penalty = parameters['repeat_penalty']
