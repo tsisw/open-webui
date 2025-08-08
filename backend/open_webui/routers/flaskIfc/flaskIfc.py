@@ -26,7 +26,7 @@ baudrate = '921600'
 #baudrate = '115200'
 exe_path = "/usr/bin/tsi/v0.1.1*/bin/"
 
-DEFAULT_MODEL = "tiny-llama"
+DEFAULT_MODEL = "TinyLlama:latest"
 DEFAULT_BACKEND = "tSavorite"
 DEFAULT_TOKEN = 12
 DEFAULT_REPEAT_PENALTY = 1.5
@@ -190,9 +190,12 @@ def actual_transfer(file):
         # Save the file if it exists
         if file:
             filename = os.path.basename(file.name)  #secure_filename(file.filename)
+            script_path = os.path.join(file_transfer_path, "copy2fpga-setup.sh")
             try:
-                process = subprocess.Popen(["{file_transfer_path}/copy2fpga-setup.sh"], text=True) #subprocess.run(["{file_transfer_path}/copy2fpga-setup.sh"], text=True, capture_output=True) 
+                process = subprocess.Popen([script_path], text=True) #subprocess.run(["{file_transfer_path}/copy2fpga-setup.sh"], text=True, capture_output=True) 
+                print("process created")
             except Exception as e:
+                print("process creation failed for copy2fpga-setup.sh")
                 return f"File-transfer setup failed: {e}", 500
             stdout, stderr = process.communicate()
             script_path = "./recvFromHost "
@@ -216,8 +219,9 @@ def actual_transfer(file):
             time.sleep(1) 
 
             try:
-                print("file_transfer_path", file_transfer_path)
-                process = subprocess.Popen(["{file_transfer_path}/copy2fpga-x86.sh", file.name], text=True)
+                script_path = os.path.join(file_transfer_path, "copy2fpga-x86.sh")
+                print("file_transfer_path", script_path)
+                process = subprocess.Popen([script_path, file.name], text=True)
                 print("process completed")
             except Exception as e:
                 print("process completed with exception")
@@ -273,6 +277,7 @@ def receive_pull_model():
     time.sleep(1)
 
     full_path = file_obj.name
+    print(full_path)
     try:
         actual_transfer(file_obj)
     except Exception as e:
@@ -579,7 +584,6 @@ def chats():
     if 'model' in data:
         model = data['model']
 
-    model = DEFAULT_MODEL
     tokens = parameters['num_predict']
     repeat_penalty = parameters['repeat_penalty']
     batch_size = parameters['num_batch']
@@ -674,7 +678,6 @@ def chat():
     if 'model' in data:
         model = data['model']
 
-    model = DEFAULT_MODEL
     tokens = parameters['num_predict']
     repeat_penalty = parameters['repeat_penalty']
     batch_size = parameters['num_batch']
