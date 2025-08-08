@@ -116,7 +116,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True) # Create the upload folder if it doesn
 
 def read_cmd_from_serial(port,baudrate,command):
     job_status['running'] = True
-    temp = serial_script.send_serial_command(port,baudrate,command) 
+    temp = serial_script.send_serial_command(port,baudrate,command, timeout=300) 
     print(temp)
     job_status['running'] = False
 
