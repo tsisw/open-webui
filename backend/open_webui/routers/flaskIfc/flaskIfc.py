@@ -14,8 +14,6 @@ import re
 from werkzeug.datastructures import FileStorage
 from werkzeug.utils import secure_filename
 
-
-
 job_status = {"running": False, "result": "", "thread": None}
 
 app = Flask(__name__)
@@ -253,19 +251,32 @@ def receive_pull_model():
         test2 = data['actual_name']
     except (TypeError, KeyError) as e:
         return f"Invalid JSON data: {e}", 400
-
-    time.sleep(1)
     
-    read_cmd_from_serial(port,baudrate,f"cd {destn_path}; rm {data['human_name']}")
-    
-    time.sleep(1)
-
     if os.path.exists("/var/snap/ollama/common/models/blobs/"):
         path = "/var/snap/ollama/common/models/blobs/" + data['actual_name']
     elif os.path.exists("/usr/share/ollama/.ollama/models/blobs/"):
         path = "/usr/share/ollama/.ollama/models/blobs/" + data['actual_name']
     else:
         return "No valid filepath found"
+
+    preliminary_target_check = serial_script.send_serial_command(port,baudrate,f"cd {destn_path}; md5sum {data['human_name']}")
+    
+    try:
+        preliminary_host_check = subprocess.run(["md5sum", path],capture_output=True,text=True,check=True)
+    except Exception as e:
+        return f"Md5sum failed: {e}", 500 
+
+    time.sleep(1)
+    
+    print('PRELIMINARY TARGET CHECK-SUM: ', preliminary_target_check)
+    print('PRELIMINARY HOST/SHELL CHECK-SUM: ', preliminary_host_check.stdout)
+
+    if preliminary_target_check.split()[0].replace('\x00', '') == preliminary_host_check.stdout.split()[0].replace('\x00', ''):
+        return manual_response(content="File Already Exists",thinking="File Already Exists"), 200
+    
+    time.sleep(1)
+    
+    read_cmd_from_serial(port,baudrate,f"cd {destn_path}; rm {data['human_name']}")
     
     time.sleep(1)
 
@@ -298,22 +309,15 @@ def receive_pull_model():
     print("Doing checksum of files")
     target_check_sum = serial_script.send_serial_command(port,baudrate,f"cd {destn_path}; md5sum {data['human_name']}")
     
-    try:
-        host_check_sum = subprocess.run(["md5sum", path],capture_output=True,text=True,check=True)
-    except Exception as e:
-        return f"Md5sum failed: {e}", 500 
-
-    print("MD5sum of local file")
     time.sleep(1)
     
     print('TARGET CHECK-SUM: ', target_check_sum)
-    print('HOST/SHELL CHECK-SUM: ', host_check_sum.stdout)
+    print('HOST/SHELL CHECK-SUM: ', preliminary_host_check.stdout)
 
-    if target_check_sum.split()[0].replace('\x00', '') != host_check_sum.stdout.split()[0].replace('\x00', ''):
-        return manual_response(content="Failed checksum match",thinking="Failed checksum match", incoming_headers=incoming_headers), 500
-    
-    return manual_response(content="File Download Done",thinking="File Download Done", incoming_headers=incoming_headers), 200
-
+    if target_check_sum.split()[0].replace('\x00', '') != preliminary_host_check.stdout.split()[0].replace('\x00', ''):
+        return manual_response(content="Failed checksum match",thinking="Failed checksum match"), 400
+      
+    return manual_response(content="File Download Done",thinking="File Download Done"), 200
 
 #    command = f"upload file"
 #    try:
@@ -889,5 +893,4 @@ def abort():
     return "<h2>No job running.</h2><a href='/'>Home</a>"
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
-
+    app.run(debug=True, port=5001)
