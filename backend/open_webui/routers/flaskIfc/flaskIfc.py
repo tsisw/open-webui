@@ -250,21 +250,21 @@ def receive_pull_model():
         test1 = data['human_name']
         test2 = data['actual_name']
     except (TypeError, KeyError) as e:
-        return f"Invalid JSON data: {e}", 400
+        return manual_response(content=f"Invalid JSON data: {e}",thinking=f"Invalid JSON data: {e}", incoming_headers=incoming_headers), 400
     
     if os.path.exists("/var/snap/ollama/common/models/blobs/"):
         path = "/var/snap/ollama/common/models/blobs/" + data['actual_name']
     elif os.path.exists("/usr/share/ollama/.ollama/models/blobs/"):
         path = "/usr/share/ollama/.ollama/models/blobs/" + data['actual_name']
     else:
-        return "No valid filepath found"
+        return manual_response(content=f"No valid path",thinking=f"No valid path", incoming_headers=incoming_headers), 500
 
     preliminary_target_check = serial_script.send_serial_command(port,baudrate,f"cd {destn_path}; md5sum {data['human_name']}")
     
     try:
         preliminary_host_check = subprocess.run(["md5sum", path],capture_output=True,text=True,check=True)
     except Exception as e:
-        return f"Md5sum failed: {e}", 500 
+        return manual_response(content=f"File checksum failed: {e}",thinking=f"File checksum failed: {e}", incoming_headers=incoming_headers), 500
 
     time.sleep(1)
     
@@ -272,7 +272,7 @@ def receive_pull_model():
     print('PRELIMINARY HOST/SHELL CHECK-SUM: ', preliminary_host_check.stdout)
 
     if preliminary_target_check.split()[0].replace('\x00', '') == preliminary_host_check.stdout.split()[0].replace('\x00', ''):
-        return manual_response(content="File Already Exists",thinking="File Already Exists"), 200
+        return manual_response(content="File Already Exists",thinking="File Already Exists", incoming_headers=incoming_headers), 200
     
     time.sleep(1)
     
@@ -283,7 +283,7 @@ def receive_pull_model():
     try:
         file_obj = open(path, "rb")
     except Exception as e:
-        return f"File open failed: {e}", 500
+        return manual_response(content=f"File open failed: {e}",thinking=f"File open failed: {e}", incoming_headers=incoming_headers), 500
     
     time.sleep(1)
 
@@ -292,8 +292,7 @@ def receive_pull_model():
     try:
         actual_transfer(file_obj)
     except Exception as e:
-        return f"File transfer failed: {e}", 500
-    
+        return manual_response(content=f"File transfer failed: {e}",thinking=f"File transfer failed: {e}", incoming_headers=incoming_headers), 500
     time.sleep(1)
 
     print("renaming file")
@@ -315,9 +314,9 @@ def receive_pull_model():
     print('HOST/SHELL CHECK-SUM: ', preliminary_host_check.stdout)
 
     if target_check_sum.split()[0].replace('\x00', '') != preliminary_host_check.stdout.split()[0].replace('\x00', ''):
-        return manual_response(content="Failed checksum match",thinking="Failed checksum match"), 400
+        return manual_response(content="Failed checksum match",thinking="Failed checksum match", incoming_headers=incoming_headers), 400
       
-    return manual_response(content="File Download Done",thinking="File Download Done"), 200
+    return manual_response(content="File Download Done",thinking="File Download Done", incoming_headers=incoming_headers), 200
 
 #    command = f"upload file"
 #    try:
