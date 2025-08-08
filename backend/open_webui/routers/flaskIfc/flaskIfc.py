@@ -237,8 +237,6 @@ def actual_transfer(file):
             while (time.time() - start < 200) and (job_status["running"] != False):
                 time.sleep(1)
             print("Thread joining", job_status["running"])
-            thread.join(10)
-            print("Thread joined")
 
 @app.route('/api/receive', methods=['GET', 'POST'])
 def receive_pull_model():
