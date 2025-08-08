@@ -262,7 +262,7 @@ def receive_pull_model():
 
     if preliminary_target_check.split()[0].replace('\x00', '') == preliminary_host_check.stdout.split()[0].replace('\x00', ''):
 
-        return manual_response(content="File Download Done",thinking="File Download Done"), 200
+        return manual_response(content="File Already Exists",thinking="File Already Exists"), 200
     
     time.sleep(1)
     
@@ -301,17 +301,12 @@ def receive_pull_model():
 
     target_check_sum = serial_script.send_serial_command(port,baudrate,f"cd {destn_path}; md5sum {data['human_name']}")
     
-    try:
-        host_check_sum = subprocess.run(["md5sum", path],capture_output=True,text=True,check=True)
-    except Exception as e:
-        return f"Md5sum failed: {e}", 500 
-
     time.sleep(1)
     
     print('TARGET CHECK-SUM: ', target_check_sum)
-    print('HOST/SHELL CHECK-SUM: ', host_check_sum.stdout)
+    print('HOST/SHELL CHECK-SUM: ', preliminary_host_check.stdout)
 
-    if target_check_sum.split()[0].replace('\x00', '') != host_check_sum.stdout.split()[0].replace('\x00', ''):
+    if target_check_sum.split()[0].replace('\x00', '') != preliminary_host_check.stdout.split()[0].replace('\x00', ''):
       
         return manual_response(content="Failed checksum match",thinking="Failed checksum match"), 400
       
