@@ -1,4 +1,5 @@
 <script lang="ts">
+        export let followUps = [];
 	import { toast } from 'svelte-sonner';
 	import dayjs from 'dayjs';
 
@@ -1465,7 +1466,8 @@
 						/>
 					{/if}
 
-					{#if (isLastMessage || ($settings?.keepFollowUpPrompts ?? false)) && message.done && !readOnly && (message?.followUps ?? []).length > 0}
+                                        {#if (isLastMessage && ($settings?.keepFollowUpPrompts ?? false)) && message.done && !readOnly && (followUps ?? []).length > 0}
+
 						<div class="mt-2.5" in:fade={{ duration: 100 }}>
 							<FollowUps
 								followUps={message?.followUps}

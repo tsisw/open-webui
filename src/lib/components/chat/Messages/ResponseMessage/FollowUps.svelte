@@ -8,6 +8,28 @@
 	export let onClick: (followUp: string) => void = () => {};
 </script>
 
+{#each followUps as item, idx}
+  {#if typeof item === 'string'}
+    <div
+      class="mr-2 py-1.5 bg-transparent text-left text-sm flex items-center gap-2 px-1.5 text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white transition cursor-pointer"
+      on:click={() => onClick(item)}
+      title={item}
+      aria-label={item}
+    >
+      <ArrowTurnDownRight className="size-3.5" />
+      <div class="line-clamp-1">{item}</div>
+    </div>
+  {:else if item.question}
+    <div class="border rounded p-2 bg-gray-50 dark:bg-gray-800 my-1">
+      <div class="font-medium">{item.question}</div>
+      <div class="text-sm text-gray-700 dark:text-gray-300">{item.answer}</div>
+    </div>
+  {/if}
+  {#if idx < followUps.length - 1}
+    <hr class="border-gray-100 dark:border-gray-850" />
+  {/if}
+{/each}
+
 <div class="mt-4">
 	<div class="text-sm font-medium">
 		{$i18n.t('Follow up')}

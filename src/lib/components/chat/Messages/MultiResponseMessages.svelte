@@ -1,5 +1,5 @@
 <script lang="ts">
-        console.log("✅ MultiResponseMessages.svelte loaded");
+        console.error("✅ MultiResponseMessages.svelte loaded");
 	import dayjs from 'dayjs';
 	import { onMount, tick, getContext } from 'svelte';
 	import { createEventDispatcher } from 'svelte';
@@ -262,6 +262,7 @@
 									gotoMessage={(message, messageIdx) => gotoMessage(modelIdx, messageIdx)}
 									showPreviousMessage={() => showPreviousMessage(modelIdx)}
 									showNextMessage={() => showNextMessage(modelIdx)}
+                                                                        followUps={history.messages[_messageId]?.follow_ups}
 									{setInputText}
 									{updateChat}
 									{editMessage}

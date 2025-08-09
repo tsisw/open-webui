@@ -1,4 +1,5 @@
 <script lang="ts">
+        console.error("✅ Chat.svelte loaded");
 	import { v4 as uuidv4 } from 'uuid';
 	import { toast } from 'svelte-sonner';
 	import mermaid from 'mermaid';
@@ -1943,7 +1944,7 @@
 	};
 
 	const mergeResponses = async (messageId, responses, _chatId) => {
-    console.log('mergeResponses', messageId, responses);
+    console.error('mergeResponses', messageId, responses);
     const message = history.messages[messageId];
     const mergedResponse = {
         status: true,
@@ -2026,6 +2027,7 @@
                     tags
                 };
             }
+            console.error("🧪 Final message after mergeResponses:", history.messages[messageId]);
         }
     } catch (e) {
         console.error(e);
