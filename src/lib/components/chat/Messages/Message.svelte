@@ -1,4 +1,5 @@
 <script lang="ts">
+        console.error("✅ Message.svelte loaded");
 	import { toast } from 'svelte-sonner';
 
 	import { tick, getContext, onMount, createEventDispatcher } from 'svelte';
@@ -91,6 +92,14 @@
 				{addMessages}
 				{readOnly}
 			/>
+
+{console.error("🔍 Checking followups or multi-model condition:", {
+  followups: history.messages[messageId]?.followups,
+  modelCount: history.messages[history.messages[messageId].parentId]?.models?.length
+})}
+
+
+
 		{:else if (history.messages[messageId]?.followups || (history.messages[history.messages[messageId].parentId]?.models?.length ?? 1) !== 1)}
                    
 {#if history.messages[messageId]?.title}
@@ -104,6 +113,8 @@
             Tags: {history.messages[messageId].tags.join(', ')}
         </div>
     {/if}
+console.error("✅ Rendering MultiResponseMessages.svelte for message:", messageId);
+
 
 			<MultiResponseMessages
 				bind:history

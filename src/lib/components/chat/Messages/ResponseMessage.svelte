@@ -1488,7 +1488,8 @@
 
 			{#if message?.done}
 				<div aria-live="polite" class="sr-only">
-					{message?.content ?? ''}
+                                        {typeof message?.content === 'string' ? message.content : ''}
+
 				</div>
 			{/if}
 		</div>
