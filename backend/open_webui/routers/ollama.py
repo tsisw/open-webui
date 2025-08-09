@@ -1356,6 +1356,29 @@ async def get_ollama_url(request: Request, model: str, url_idx: Optional[int] = 
     return url, url_idx
 
 
+import re
+import json
+
+def extract_follow_ups_from_text(text):
+    try:
+        parsed = json.loads(text)
+        if isinstance(parsed, dict) and "follow_up_questions" in parsed:
+            questions = parsed["follow_up_questions"]
+            if all(isinstance(q, str) for q in questions):
+                return questions
+            elif all(isinstance(q, dict) and "question" in q for q in questions):
+                return questions  # structured format with answers
+    except json.JSONDecodeError:
+        pass
+
+    # Fallbacks
+    matches = re.findall(r'\d+\.\s+(.*?)(?=\n|$)', text)
+    if matches:
+        return matches[:5]
+
+    quoted = re.findall(r'"([^"]+)"', text)
+    return quoted[:5] if quoted else []
+
 @router.post("/api/chat")
 @router.post("/api/chat/{url_idx}")
 async def generate_chat_completion(
@@ -1460,6 +1483,17 @@ async def generate_chat_completion(
         try:
             if isinstance(response, dict):
                 logging.info("ANOOP NON-STREAMED RESPONSE-0: %s", response)
+
+                # ✅ Extract follow-ups if present in message content
+                if 'message' in response and 'content' in response['message']:
+                    raw_response = response['message']['content']
+                    follow_ups = extract_follow_ups_from_text(raw_response)
+
+                    if follow_ups:
+                        response['follow_ups'] = follow_ups[:5]  # Limit to top 5
+                        logging.info("ANOOP EXTRACTED FOLLOW_UPS: %s", follow_ups)
+
+
                 return response
             else:
                 data = await response.json()
