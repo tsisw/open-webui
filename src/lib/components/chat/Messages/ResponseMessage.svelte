@@ -1,5 +1,7 @@
 <script lang="ts">
         export let followUps = [];
+        $: followUps = history?.messages?.[messageId]?.followUps ?? [];
+
 	import { toast } from 'svelte-sonner';
 	import dayjs from 'dayjs';
 
@@ -109,7 +111,14 @@
 	export let messageId;
 	export let selectedModels = [];
 
-	let message: MessageType = JSON.parse(JSON.stringify(history.messages[messageId]));
+        console.error("🧪 Debug: messageId =", messageId);
+        console.error("🧪 Debug: history.messages[messageId] =", history?.messages?.[messageId]);
+
+        let message: MessageType = history?.messages?.[messageId]
+
+  ? JSON.parse(JSON.stringify(history.messages[messageId]))
+  : { id: 'undefined', content: '', role: 'assistant', model: '', done: false };
+
 	$: if (history.messages) {
 		if (JSON.stringify(message) !== JSON.stringify(history.messages[messageId])) {
 			message = JSON.parse(JSON.stringify(history.messages[messageId]));

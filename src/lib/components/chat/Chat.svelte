@@ -2022,7 +2022,7 @@
                     ...message,
                     content: mergedResponse.content,
                     done: true,
-                    followups: followUps,
+                    followUps: followUps,
                     title,
                     tags
                 };

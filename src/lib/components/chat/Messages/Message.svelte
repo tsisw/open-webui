@@ -76,6 +76,7 @@
 				{selectedModels}
 				isLastMessage={messageId === history.currentId}
 				siblings={history.messages[history.messages[messageId].parentId]?.childrenIds ?? []}
+                                followUps={history.messages[messageId]?.followUps ?? []}
 				{setInputText}
 				{gotoMessage}
 				{showPreviousMessage}
@@ -93,14 +94,14 @@
 				{readOnly}
 			/>
 
-{console.error("🔍 Checking followups or multi-model condition:", {
-  followups: history.messages[messageId]?.followups,
+{console.error("🔍 Checking followUps or multi-model condition:", {
+  followUps: history.messages[messageId]?.followUps,
   modelCount: history.messages[history.messages[messageId].parentId]?.models?.length
 })}
 
 
 
-		{:else if (history.messages[messageId]?.followups || (history.messages[history.messages[messageId].parentId]?.models?.length ?? 1) !== 1)}
+		{:else if (history.messages[messageId]?.followUps || (history.messages[history.messages[messageId].parentId]?.models?.length ?? 1) !== 1)}
                    
 {#if history.messages[messageId]?.title}
         <div class="text-sm font-semibold text-blue-600 mb-2">

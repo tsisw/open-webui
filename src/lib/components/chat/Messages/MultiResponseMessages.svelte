@@ -262,7 +262,7 @@
 									gotoMessage={(message, messageIdx) => gotoMessage(modelIdx, messageIdx)}
 									showPreviousMessage={() => showPreviousMessage(modelIdx)}
 									showNextMessage={() => showNextMessage(modelIdx)}
-                                                                        followUps={history.messages[_messageId]?.follow_ups}
+                                                                        followUps={history.messages[_messageId]?.followUps}
 									{setInputText}
 									{updateChat}
 									{editMessage}
