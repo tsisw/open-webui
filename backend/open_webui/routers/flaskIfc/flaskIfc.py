@@ -181,6 +181,7 @@ def upload_serial_command():
     return render_template('upload.html') # Display the upload form
 
 DEFAULT_THREAD_TIMEOUT=900
+PER_1G_TIMEOUT_SECS=240
 GB = 1024 * 1024 * 1024
 
 def actual_transfer(file, file_size):
@@ -202,7 +203,7 @@ def actual_transfer(file, file_size):
             script_path = "./recvFromHost "
             command = f"cd {exe_path}; {script_path} {destn_path}{filename}\n"
 
-            timeout = max(240 * file_size / GB, DEFAULT_THREAD_TIMEOUT) #4 mins per 1 GB is the speed we observe
+            timeout = max(PER_1G_TIMEOUT_SECS * file_size / GB, DEFAULT_THREAD_TIMEOUT) #4 mins per 1 GB is the speed we observe
 
             print("Command:", command, "Timeout:", timeout)
 
@@ -239,7 +240,10 @@ def actual_transfer(file, file_size):
             start = time.time()
             while (time.time() - start < timeout) and (job_status["running"] != False):
                 time.sleep(1)
-            print("Thread joining", job_status["running"])
+            if(time.time() - start < timeout):
+                print("Thread exited normally", job_status["running"])
+            else:
+                print("Thread timed out", job_status["running"])
 
 def normalize_model_name(model_name):
     if ":" not in model_name:
