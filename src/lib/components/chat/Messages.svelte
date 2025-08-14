@@ -38,7 +38,7 @@
 
 	export let setInputText: Function = () => {};
 
-	export let sendMessage: Function;
+	export let sendPrompt: Function;
 	export let continueResponse: Function;
 	export let regenerateResponse: Function;
 	export let mergeResponses: Function;
@@ -50,7 +50,6 @@
 
 	export let readOnly = false;
 
-	export let topPadding = false;
 	export let bottomPadding = false;
 	export let autoScroll;
 
@@ -77,7 +76,11 @@
 
 		let message = history.messages[history.currentId];
 		while (message && _messages.length <= messagesCount) {
-			_messages.unshift({ ...message });
+			console.error("🧪 Message being added:", message);
+                        if (message?.content !== undefined && message?.id !== 'undefined') {
+  				_messages.unshift({ ...message });
+}
+
 			message = message.parentId !== null ? history.messages[message.parentId] : null;
 		}
 
@@ -295,7 +298,7 @@
 				history.currentId = userMessageId;
 
 				await tick();
-				await sendMessage(history, userMessageId);
+				await sendPrompt(history, userPrompt, userMessageId);
 			} else {
 				// Edit user message
 				history.messages[messageId].content = content;
@@ -446,7 +449,6 @@
 							{addMessages}
 							{triggerScroll}
 							{readOnly}
-							{topPadding}
 						/>
 					{/each}
 				</div>

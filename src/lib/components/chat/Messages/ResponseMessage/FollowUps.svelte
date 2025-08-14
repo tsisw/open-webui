@@ -1,13 +1,40 @@
 <script lang="ts">
-	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import ArrowTurnDownRight from '$lib/components/icons/ArrowTurnDownRight.svelte';
 	import { onMount, tick, getContext } from 'svelte';
 
 	const i18n = getContext('i18n');
 
 	export let followUps: string[] = [];
+	console.error("FollowUps.svelte received followUps:", followUps);
 	export let onClick: (followUp: string) => void = () => {};
 </script>
+
+
+{#if followUps && followUps.length > 0}
+
+{#each followUps as item, idx}
+  {#if typeof item === 'string'}
+    <div
+      class="mr-2 py-1.5 bg-transparent text-left text-sm flex items-center gap-2 px-1.5 text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white transition cursor-pointer"
+      on:click={() => onClick(item)}
+      title={item}
+      aria-label={item}
+    >
+      <ArrowTurnDownRight className="size-3.5" />
+      <div class="line-clamp-1">{item}</div>
+    </div>
+  {:else if item.question}
+    <div class="border rounded p-2 bg-gray-50 dark:bg-gray-800 my-1">
+      <div class="font-medium">{item.question}</div>
+      <div class="text-sm text-gray-700 dark:text-gray-300">{item.answer}</div>
+    </div>
+  {/if}
+  {#if idx < followUps.length - 1}
+    <hr class="border-gray-100 dark:border-gray-850" />
+  {/if}
+{/each}
+{/if}
+
 
 <div class="mt-4">
 	<div class="text-sm font-medium">
@@ -18,20 +45,18 @@
 		{#each followUps as followUp, idx (idx)}
 			<!-- svelte-ignore a11y-no-static-element-interactions -->
 			<!-- svelte-ignore a11y-click-events-have-key-events -->
-			<Tooltip content={followUp} placement="top-start" className="line-clamp-1">
-				<div
-					class=" mr-2 py-1.5 bg-transparent text-left text-sm flex items-center gap-2 px-1.5 text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white transition cursor-pointer"
-					on:click={() => onClick(followUp)}
-					title={followUp}
-					aria-label={followUp}
-				>
-					<ArrowTurnDownRight className="size-3.5" />
+			<div
+				class=" mr-2 py-1.5 bg-transparent text-left text-sm flex items-center gap-2 px-1.5 text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white transition cursor-pointer"
+				on:click={() => onClick(followUp)}
+				title={followUp}
+				aria-label={followUp}
+			>
+				<ArrowTurnDownRight className="size-3.5" />
 
-					<div class="line-clamp-1">
-						{followUp}
-					</div>
+				<div class="line-clamp-1">
+					{followUp}
 				</div>
-			</Tooltip>
+			</div>
 
 			{#if idx < followUps.length - 1}
 				<hr class="border-gray-100 dark:border-gray-850" />
