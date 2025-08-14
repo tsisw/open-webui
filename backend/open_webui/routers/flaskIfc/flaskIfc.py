@@ -202,7 +202,7 @@ def actual_transfer(file, file_size):
             script_path = "./recvFromHost "
             command = f"cd {exe_path}; {script_path} {destn_path}{filename}\n"
 
-            timeout = max(120 * file_size / GB, DEFAULT_THREAD_TIMEOUT) #2 mins per 1 GB is the speed we observe
+            timeout = max(240 * file_size / GB, DEFAULT_THREAD_TIMEOUT) #4 mins per 1 GB is the speed we observe
 
             print("Command:", command, "Timeout:", timeout)
 
@@ -241,6 +241,12 @@ def actual_transfer(file, file_size):
                 time.sleep(1)
             print("Thread joining", job_status["running"])
 
+def normalize_model_name(model_name):
+    if ":" not in model_name:
+        return model_name + ":latest"
+    return model_name
+
+
 @app.route('/api/receive-upload', methods=['GET', 'POST'])
 def receive_upload_model():
 
@@ -251,7 +257,7 @@ def receive_upload_model():
 
     filename_without_ext = os.path.splitext(os.path.basename(data['actual_name']))[0]
 
-    new_file_name = filename_without_ext + ":latest"
+    new_file_name = normalize_model_name(data['human_name'])
 
     print("human_name:", data['human_name'], "actual_name", data['actual_name'], "new_file_name:", new_file_name)
 
