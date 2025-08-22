@@ -189,7 +189,6 @@
                         <div class="mt-2 space-y-3 pr-1.5">
                                 <div class="flex justify-between items-center text-sm">
                                         <div class="  font-medium">{$i18n.t('Abort Job')}</div>
-
                                 <button
                                         disabled={$isRestarting}
                                         class={
@@ -207,7 +206,6 @@
                                 </button>
                                 </div>
                         </div>
-
 		{/if}
 			{#if $user?.role === 'admin' || ($user?.permissions.chat?.params ?? true)}
 				<Collapsible title={$i18n.t('Advanced Params')} open={true} buttonClassName="w-full">
@@ -215,8 +213,11 @@
 						<div>
 							<AdvancedParams admin={$user?.role === 'admin'} custom={true} bind:params />
 						</div>
+
 					</div>
 				</Collapsible>
+
+				<hr class="my-2 border-gray-50 dark:border-gray-700/10" />
 			{/if}
 		</div>
 	{/if}
