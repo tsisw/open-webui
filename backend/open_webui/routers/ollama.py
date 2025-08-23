@@ -7,6 +7,7 @@ import asyncio
 import json
 import logging
 import os
+import shutil
 import random
 import re
 import time
@@ -1498,31 +1499,38 @@ async def systeminfo_opu(
         user=user,
     )
 
+def ollama_download_openwebui_log_command():
+    original_path = 'open-webui.log'
+    copied_path = 'open-webui-copy.log'  # You can change this name if needed
 
-async def ollama_download_openwebui_log_command():
-    file_path = 'open-webui.log'  # Replace with your actual file path
-    if not os.path.exists(file_path):
+    # Check if original file exists
+    if not os.path.exists(original_path):
+        print("file_path:", original_path, "does not exist")
         raise HTTPException(status_code=404, detail="Log file not found")
 
-    return FileResponse(path=file_path, 
-            #media_type="text/plain",  # Forces download
-            media_type="application/octet-stream",  # Forces download
-            filename="open-webui.log",
-            headers={
-                "Content-Disposition": "attachment; filename=open-webui.log",
-                "Cache-Control": "no-store, no-cache, must-revalidate",
-                "Pragma": "no-cache",
-                "Expires": "0"
-            })
+    # Copy the file
+    shutil.copyfile(original_path, copied_path)
 
-async def ollama_download_flask_log_command():
+    # Serve the copied file
+    return FileResponse(
+        path=copied_path,
+        media_type="application/octet-stream",
+        filename="open-webui.log",  # You can rename for download if needed
+        headers={
+            "Content-Disposition": "attachment; filename=open-webui.log",
+            "Cache-Control": "no-store, no-cache, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0"
+        }
+    )
+
+def ollama_download_flask_log_command():
     file_path = 'backend/open_webui/routers/flaskIfc/flask.log'  # Replace with your actual file path
     if not os.path.exists(file_path):
         print("file_path: ", file_path, "does not exists")
         raise HTTPException(status_code=404, detail="Log file not found")
 
     return FileResponse(path=file_path,
-            #media_type="text/plain",  # Forces download
             media_type="application/octet-stream",  # Forces download
             filename="flask.log",
             headers={
@@ -1532,45 +1540,25 @@ async def ollama_download_flask_log_command():
                 "Expires": "0"
             })
 
-@router.post("/api/opu-flask-log")
+@router.get("/api/opu-flask-log", response_class=FileResponse)
 async def download_flask_log(
     request: Request,
-    form_data: dict,
     url_idx: Optional[int] = None,
     user=Depends(get_verified_user),
     bypass_filter: Optional[bool] = False,
 ):
     url = DEFAULT_FLASK_URL
-    print(os.getcwd())
-    return await ollama_download_flask_log_command() 
-    #return await send_post_request(
-    #    url=f"{url}/api/flask-log",
-    #    payload=None,
-    #    stream=False,
-    #    key=None,
-    #    content_type="application/x-ndjson",
-    #    user=user,
-    #)
+    return ollama_download_flask_log_command()
 
-@router.post("/api/opu-openwebui-log")
+@router.get("/api/opu-openwebui-log", response_class=FileResponse)
 async def download_open_webui_log(
     request: Request,
-    form_data: dict,
     url_idx: Optional[int] = None,
     user=Depends(get_verified_user),
     bypass_filter: Optional[bool] = False,
 ):
     url = DEFAULT_FLASK_URL
-    print(os.getcwd())
-    return await ollama_download_openwebui_log_command() 
-    #return await send_post_request(
-    #    url=f"{url}/api/openwebui-log",
-    #    payload=None,
-    #    stream=False,
-    #    key=None,
-    #    content_type="application/x-ndjson",
-    #    user=user,
-    #)
+    return ollama_download_openwebui_log_command()
 
 @router.post("/api/healthcheckopu")
 async def healthcheck_opu(

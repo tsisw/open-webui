@@ -29,8 +29,6 @@
 		const res = await fetch('/ollama/api/opu-openwebui-log', {
 			method: 'GET',
 			headers: {
-				//'Content-Type': 'application/json',
-				'Content-Type': 'text/plain',
 			}
 		})	
 
@@ -70,8 +68,6 @@
                 const res = await fetch('/ollama/api/opu-flask-log', {
                         method: 'GET',
                         headers: {
-                                //'Content-Type': 'application/json',
-                                'Content-Type': 'text/plain',
                         }
                 })
 
