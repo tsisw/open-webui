@@ -891,11 +891,12 @@
 		const userSettings = await getUserSettings(localStorage.token);
 
 		if (userSettings) {
-			settings.set({ ...userSettings.ui, autoFollowUps: false });
+			settings.set({ ...userSettings.ui, autoFollowUps: false, title: { auto: false }, autoTags: false });
+
 
 		} else {
-			settings.set({ ...JSON.parse(localStorage.getItem('settings') ?? '{}'), autoFollowUps: false });
-
+			settings.set({ ...JSON.parse(localStorage.getItem('settings') ?? '{}'), autoFollowUps: false, title: { auto: false }, autoTags: false
+});
 		}
 
 		const chatInput = document.getElementById('chat-input');
