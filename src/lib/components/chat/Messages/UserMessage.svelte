@@ -518,8 +518,7 @@
 										viewBox="0 0 24 24"
 										stroke-width="2"
 										stroke="currentColor"
-										stroke-width="2.5"
-										class="size-3.5"
+										class="w-4 h-4"
 									>
 										<path
 											stroke-linecap="round"
