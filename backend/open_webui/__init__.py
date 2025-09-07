@@ -80,6 +80,7 @@ def serve(
         host=host,
         port=port,
         forwarded_allow_ips="*",
+        proxy_headers=True,
         workers=UVICORN_WORKERS,
     )
 
@@ -95,6 +96,7 @@ def dev(
         host=host,
         port=port,
         reload=reload,
+        proxy_headers=True,
         forwarded_allow_ips="*",
     )
 
