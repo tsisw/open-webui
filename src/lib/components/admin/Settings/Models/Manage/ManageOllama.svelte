@@ -328,7 +328,11 @@
 			toast.error(error?.detail ?? error);
 		}
 
-		if (uploaded) {
+		/* Following lines are commented out to ensure when upload is complete the pop up disappears
+		 * in upstream code the createModel is happening twice and it fails here
+		 * as the model already exists created in Ollama.py
+		 */
+		/*if (uploaded) {
 			const res = await createModel(
 				localStorage.token,
 				`${name}:latest`,
@@ -388,7 +392,7 @@
 					}
 				}
 			}
-		}
+		}*/
 
 		modelFileUrl = '';
 
