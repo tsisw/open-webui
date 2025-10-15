@@ -3,9 +3,6 @@ export TSI_HOSTNAME=$(hostname)
 if [ "${TSI_HOSTNAME}" == "fpga1.tsavoritesi.net" ] || [ "${TSI_HOSTNAME}" == "fpga2.tsavoritesi.net" ]  || [ "${TSI_HOSTNAME}" == "fpga3.tsavoritesi.net" ]  || [ "${TSI_HOSTNAME}" == "fpga4.tsavoritesi.net" ];
 then
 sudo -v
-elif [ "${TSI_HOSTNAME}" == "qemuarm64" ]
-then
-exit
 fi
 PROCESS_FLASK_NAME="flaskIfc.py" # Flask process name 
 
