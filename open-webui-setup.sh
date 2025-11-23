@@ -2,6 +2,8 @@ export TSI_HOSTNAME=$(hostname)
 if [ "${TSI_HOSTNAME}" == "fpga1.tsavoritesi.net" ] || [ "${TSI_HOSTNAME}" == "fpga2.tsavoritesi.net" ]  || [ "${TSI_HOSTNAME}" == "fpga3.tsavoritesi.net" ]  || [ "${TSI_HOSTNAME}" == "fpga4.tsavoritesi.net" ];
 then
 sudo -v
+else
+export OLLAMA_BASE_URLS="http://192.168.1.200:11434"
 fi
 if [ -e .venv ] && [ "$1" != "-f" ]
 then
@@ -12,8 +14,14 @@ then
 pip install uv==0.9.1
 pip install uvicorn==0.37.0
 else
+if [ "${TSI_HOSTNAME}" == "fpga1.tsavoritesi.net" ] || [ "${TSI_HOSTNAME}" == "fpga2.tsavoritesi.net" ]  || [ "${TSI_HOSTNAME}" == "fpga3.tsavoritesi.net" ]  || [ "${TSI_HOSTNAME}" == "fpga4.tsavoritesi.net" ];
+then
 pip install uv
 pip install uvicorn
+else
+pip install uv  --break-system-packages
+pip install uvicorn  --break-system-packages
+fi
 fi
 if [ "${TSI_HOSTNAME}" == "fpga1.tsavoritesi.net" ] || [ "${TSI_HOSTNAME}" == "fpga2.tsavoritesi.net" ]  || [ "${TSI_HOSTNAME}" == "fpga3.tsavoritesi.net" ]  || [ "${TSI_HOSTNAME}" == "fpga4.tsavoritesi.net" ] || [ "${TSI_HOSTNAME}" == "qemuarm64" ];
 then
@@ -45,17 +53,19 @@ nvm install 20.18.1
 nvm use 20.18.1
 node -v
 npm -v
-pip install --upgrade chromadb
 if [ "${TSI_HOSTNAME}" == "fpga1.tsavoritesi.net" ] || [ "${TSI_HOSTNAME}" == "fpga2.tsavoritesi.net" ]  || [ "${TSI_HOSTNAME}" == "fpga3.tsavoritesi.net" ]  || [ "${TSI_HOSTNAME}" == "fpga4.tsavoritesi.net" ];
 then
+pip install --upgrade chromadb
 sudo pip install portalocker
 elif [ "${TSI_HOSTNAME}" == "qemuarm64" ]
 then
 export NODE_OPTIONS="--max-old-space-size=4096"
 curl -fsSL https://ollama.com/install.sh | sh
+pip install --upgrade chromadb
 pip install portalocker
 else
-pip install portalocker
+pip install --upgrade chromadb  --break-system-packages
+pip install portalocker --break-system-packages
 fi
 ln -s $(pwd)/build backend/open_webui/frontend
 fi
