@@ -142,6 +142,16 @@ async def send_post_request(
             if metadata and metadata.get("chat_id"):
                 headers["X-OpenWebUI-Chat-Id"] = metadata.get("chat_id")
 
+        headers = {
+            "Content-Type": "application/json",
+            **({"Authorization": f"Bearer {key}"} if key else {}),
+        }
+
+        if ENABLE_FORWARD_USER_INFO_HEADERS and user:
+            headers = include_user_info_headers(headers, user)
+            if metadata and metadata.get("chat_id"):
+                headers["X-OpenWebUI-Chat-Id"] = metadata.get("chat_id")
+
         r = await session.post(
             url,
             data=payload,
@@ -964,7 +974,7 @@ async def delete_model(
             method="DELETE",
             url=f"{url}/api/delete",
             headers=headers,
-            data=json.dumps(form_data).encode(),
+            data=form_data.model_dump_json(exclude_none=True).encode(),
         )
         r.raise_for_status()
 
