@@ -974,7 +974,7 @@ async def delete_model(
             method="DELETE",
             url=f"{url}/api/delete",
             headers=headers,
-            data=form_data.model_dump_json(exclude_none=True).encode(),
+            data=json.dumps(form_data).encode(),
         )
         r.raise_for_status()
 
