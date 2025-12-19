@@ -80,6 +80,26 @@
 			</div>
 		</Tooltip>
 	</div>
+	<div class="py-0.5 w-full justify-between">
+		<Tooltip
+			content={$i18n.t('Configure backend Ollama queries vs Aot-tests')}
+			placement="top-start"
+			className="inline-tooltip"
+		>
+			<div class="flex w-full justify-between">
+				<div class="self-center text-xs font-medium">
+					{$i18n.t('AOTTESTs')}
+				</div>
+				<select
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden bg-white text-black dark:bg-gray-800 dark:text-white"
+					bind:value={params.aottests}
+				>
+					<option value="no">{$i18n.t('NO')}</option>
+					<option value="yes">{$i18n.t('YES')}</option>
+				</select>
+			</div>
+		</Tooltip>
+	</div>
 	<div>
 		<Tooltip
 			content={$i18n.t(
