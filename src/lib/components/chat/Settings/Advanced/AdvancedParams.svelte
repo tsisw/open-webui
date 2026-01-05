@@ -15,6 +15,7 @@
 	const defaultParams = {
 		// Advanced
 		target: 'opu',
+		aottests: 'no',
 		stream_response: null, // Set stream responses for this model individually
 		stream_delta_chunk_size: null, // Set the chunk size for streaming responses
 		function_calling: null,

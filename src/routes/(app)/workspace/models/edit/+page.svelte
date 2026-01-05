@@ -6,7 +6,7 @@
 	const i18n = getContext('i18n');
 
 	import { page } from '$app/stores';
-	import { config, models, settings } from '$lib/stores';
+	import { config, models, settings, isAottests } from '$lib/stores';
 
 	import { getModelById, updateModelById } from '$lib/apis/models';
 
@@ -37,6 +37,7 @@
 			await models.set(
 				await getModels(
 					localStorage.token,
+					$isAottests,
 					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
 				)
 			);

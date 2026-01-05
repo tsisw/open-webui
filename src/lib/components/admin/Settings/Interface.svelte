@@ -7,7 +7,7 @@
 
 	import { getBackendConfig, getModels, getTaskConfig, updateTaskConfig } from '$lib/apis';
 	import { setDefaultPromptSuggestions } from '$lib/apis/configs';
-	import { config, settings, user } from '$lib/stores';
+	import { config, settings, user, isAottests } from '$lib/stores';
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
 
 	import { banners as _banners } from '$lib/stores';
@@ -74,7 +74,7 @@
 		banners = await getBanners(localStorage.token);
 
 		workspaceModels = await getBaseModels(localStorage.token);
-		baseModels = await getModels(localStorage.token, null, false);
+		baseModels = await getModels(localStorage.token, $isAottests, null, false);
 
 		models = baseModels.map((m) => {
 			const workspaceModel = workspaceModels.find((wm) => wm.id === m.id);

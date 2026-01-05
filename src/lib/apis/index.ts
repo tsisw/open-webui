@@ -1,5 +1,6 @@
 import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 import { convertOpenApiToToolPayload } from '$lib/utils';
+import { settings } from '$lib/stores';
 import { getOpenAIModelsDirect } from './openai';
 
 import { parse } from 'yaml';
@@ -7,6 +8,7 @@ import { toast } from 'svelte-sonner';
 
 export const getModels = async (
 	token: string = '',
+	aottests: boolan = false,
 	connections: object | null = null,
 	base: boolean = false,
 	refresh: boolean = false
@@ -14,6 +16,10 @@ export const getModels = async (
 	const searchParams = new URLSearchParams();
 	if (refresh) {
 		searchParams.append('refresh', 'true');
+	}
+
+	if (aottests != null) {
+		searchParams.append('aottests', aottests ? 'true' : 'false');
 	}
 
 	let error = null;

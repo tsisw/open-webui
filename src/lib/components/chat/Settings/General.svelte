@@ -4,7 +4,7 @@
 	import { getLanguages, changeLanguage } from '$lib/i18n';
 	const dispatch = createEventDispatcher();
 
-	import { config, models, settings, theme, user, isRestarting } from '$lib/stores';
+	import { config, models, settings, theme, user, isRestarting, isAottests } from '$lib/stores';
 
 	const i18n = getContext('i18n');
 
@@ -210,6 +210,9 @@
 		localStorage.setItem('theme', _theme);
 		applyTheme(_theme);
 	};
+
+	// Drive the store from params
+	$: isAottests.set(params?.aottests?.toString?.().trim?.().toLowerCase() === 'yes');
 </script>
 
 <ConfirmDialog

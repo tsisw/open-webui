@@ -6,7 +6,15 @@
 	import { onMount, getContext, tick } from 'svelte';
 	const i18n = getContext('i18n');
 
-	import { WEBUI_NAME, config, mobile, models as _models, settings, user } from '$lib/stores';
+	import {
+		WEBUI_NAME,
+		config,
+		mobile,
+		models as _models,
+		settings,
+		user,
+		isAottests
+	} from '$lib/stores';
 	import {
 		createNewModel,
 		deleteAllModels,
@@ -83,7 +91,7 @@
 		models = null;
 
 		workspaceModels = await getBaseModels(localStorage.token);
-		baseModels = await getModels(localStorage.token, null, true);
+		baseModels = await getModels(localStorage.token, $isAottests, null, true);
 
 		models = baseModels.map((m) => {
 			const workspaceModel = workspaceModels.find((wm) => wm.id === m.id);
@@ -138,6 +146,7 @@
 		_models.set(
 			await getModels(
 				localStorage.token,
+				$isAottests,
 				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
 			)
 		);
@@ -164,6 +173,7 @@
 		_models.set(
 			await getModels(
 				localStorage.token,
+				$isAottests,
 				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
 			)
 		);

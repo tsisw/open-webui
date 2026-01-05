@@ -3,7 +3,15 @@
 	import { getContext, onMount } from 'svelte';
 	const i18n = getContext('i18n');
 
-	import { WEBUI_NAME, models, MODEL_DOWNLOAD_POOL, user, config, settings } from '$lib/stores';
+	import {
+		WEBUI_NAME,
+		models,
+		MODEL_DOWNLOAD_POOL,
+		user,
+		config,
+		settings,
+		isAottests
+	} from '$lib/stores';
 	import { splitStream } from '$lib/utils';
 
 	import {
@@ -268,6 +276,7 @@
 				models.set(
 					await getModels(
 						localStorage.token,
+						$isAottests,
 						$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
 					)
 				);
@@ -439,6 +448,7 @@
 		models.set(
 			await getModels(
 				localStorage.token,
+				$isAottests,
 				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
 			)
 		);
@@ -457,6 +467,7 @@
 		models.set(
 			await getModels(
 				localStorage.token,
+				$isAottests,
 				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
 			)
 		);
@@ -569,6 +580,7 @@
 		models.set(
 			await getModels(
 				localStorage.token,
+				$isAottests,
 				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
 			)
 		);

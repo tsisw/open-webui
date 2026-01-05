@@ -20,6 +20,7 @@
 		models,
 		mobile,
 		temporaryChatEnabled,
+		isAottests,
 		settings,
 		config
 	} from '$lib/stores';
@@ -296,6 +297,7 @@
 				models.set(
 					await getModels(
 						localStorage.token,
+						$isAottests,
 						$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
 					)
 				);
@@ -356,6 +358,7 @@
 			models.set(
 				await getModels(
 					localStorage.token,
+					$isAottests,
 					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
 				)
 			);
@@ -389,6 +392,7 @@
 				models.set(
 					await getModels(
 						localStorage.token,
+						$isAottests,
 						$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
 					)
 				);

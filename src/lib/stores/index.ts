@@ -102,6 +102,7 @@ export const playingNotificationSound = writable(false);
 
 export let isRestarting = writable(false);
 export let isAborting = writable(false);
+export let isAottests = writable(false);
 
 export type Model = OpenAIModel | OllamaModel;
 
@@ -211,6 +212,7 @@ type Settings = {
 	repeat_penalty?: string;
 	top_k?: string;
 	target?: string;
+	aottests?: string;
 	top_p?: string;
 	num_ctx?: string;
 	num_batch?: string;

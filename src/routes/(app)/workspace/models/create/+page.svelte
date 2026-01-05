@@ -2,7 +2,7 @@
 	import { v4 as uuidv4 } from 'uuid';
 	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
-	import { config, models, settings } from '$lib/stores';
+	import { config, models, settings, isAottests } from '$lib/stores';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	import { onMount, tick, getContext } from 'svelte';
@@ -50,6 +50,7 @@
 				await models.set(
 					await getModels(
 						localStorage.token,
+						$isAottests,
 						$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
 					)
 				);
