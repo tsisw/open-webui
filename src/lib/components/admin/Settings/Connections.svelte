@@ -9,7 +9,7 @@
 	import { getModels as _getModels, getBackendConfig } from '$lib/apis';
 	import { getConnectionsConfig, setConnectionsConfig } from '$lib/apis/configs';
 
-	import { config, models, settings, user } from '$lib/stores';
+	import { config, models, settings, user, isAottests } from '$lib/stores';
 
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
@@ -25,6 +25,7 @@
 	const getModels = async () => {
 		const models = await _getModels(
 			localStorage.token,
+			$isAottests,
 			$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null),
 			false,
 			true

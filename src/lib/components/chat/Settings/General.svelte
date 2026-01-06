@@ -4,14 +4,19 @@
 	import { getLanguages, changeLanguage } from '$lib/i18n';
 	const dispatch = createEventDispatcher();
 
-	import { config, models, settings, theme, user, isRestarting } from '$lib/stores';
+	import { config, models, settings, theme, user, isRestarting, isAottests } from '$lib/stores';
 
 	const i18n = getContext('i18n');
 
 	import AdvancedParams from './Advanced/AdvancedParams.svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
 
-	import { restartOpu, systemInfoOpu, healthCheckOpu } from '../Controls/Controls.svelte';
+	import {
+		restartOpu,
+		systemInfoOpu,
+		healthCheckOpu,
+		compileAotTest
+	} from '../Controls/Controls.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 
 	export let saveSettings: Function;
@@ -34,6 +39,7 @@
 	let showSystemInfo = false;
 	let showSystemInfoModal = false;
 	let systemInfoOutput = {};
+	let aotTestOutput = {};
 	let showRestartOPUConfirmDialog = false;
 
 	const toggleNotification = async () => {
@@ -69,6 +75,7 @@
 		mirostat_tau: null,
 		top_k: null,
 		target: 'opu',
+		aottests: 'no',
 		top_p: null,
 		min_p: null,
 		stop: null,
@@ -102,6 +109,7 @@
 				mirostat_tau: params.mirostat_tau !== null ? params.mirostat_tau : undefined,
 				top_k: params.top_k !== null ? params.top_k : undefined,
 				target: params.target !== null ? params.target : 'opu',
+				aottests: params.aottests !== null ? params.aottests : 'no',
 				top_p: params.top_p !== null ? params.top_p : undefined,
 				min_p: params.min_p !== null ? params.min_p : undefined,
 				tfs_z: params.tfs_z !== null ? params.tfs_z : undefined,
@@ -202,6 +210,9 @@
 		localStorage.setItem('theme', _theme);
 		applyTheme(_theme);
 	};
+
+	// Drive the store from params
+	$: isAottests.set(params?.aottests?.toString?.().trim?.().toLowerCase() === 'yes');
 </script>
 
 <ConfirmDialog
@@ -340,6 +351,32 @@
 						>{$isRestarting ? $i18n.t('OPU Restarting...') : $i18n.t('Restart OPU Now')}
 					</button>
 				</div>
+			</div>
+		{/if}
+
+		{#if ($user?.role === 'admin' || ($user?.permissions.chat?.controls ?? true)) && params.aottests === 'yes'}
+			<div class="mt-2 space-y-3 pr-1.5">
+				<div class="flex justify-between items-center text-sm">
+					<div class="  font-medium">{$i18n.t('PyTorch Models')}</div>
+					<button
+						class={'w-auto text-sm px-2 py-1 rounded-md transition-colors duration-200' +
+							($settings.highContrastMode
+								? ' border-2 border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-850 text-gray-900 dark:text-gray-100 hover:bg-blue-100 dark:hover:bg-blue-900'
+								: ' bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-600')}
+						on:click={async () => {
+							aotTestOutput = await compileAotTest(); // SystemInfo logic
+							if (!aotTestOutput)
+								toast.error($i18n.t(`Something went wrong while compiling PyTorch models.`));
+							showSystemInfoModal = true;
+						}}
+						>{$i18n.t('Compile')}
+					</button>
+				</div>
+				{#if showSystemInfoModal && aotTestOutput?.message?.content}
+					<div class="...">
+						<pre>{aotTestOutput.message.content}</pre>
+					</div>
+				{/if}
 			</div>
 		{/if}
 

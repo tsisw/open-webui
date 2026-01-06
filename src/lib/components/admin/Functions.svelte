@@ -3,7 +3,15 @@
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
-	import { WEBUI_NAME, config, functions as _functions, models, settings, user } from '$lib/stores';
+	import {
+		WEBUI_NAME,
+		config,
+		functions as _functions,
+		models,
+		settings,
+		user,
+		isAottests
+	} from '$lib/stores';
 	import { onMount, getContext, tick } from 'svelte';
 
 	import { goto } from '$app/navigation';
@@ -164,6 +172,7 @@
 			models.set(
 				await getModels(
 					localStorage.token,
+					$isAottests,
 					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null),
 					false,
 					true
@@ -192,6 +201,7 @@
 			models.set(
 				await getModels(
 					localStorage.token,
+					$isAottests,
 					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null),
 					false,
 					true
@@ -559,6 +569,7 @@
 												models.set(
 													await getModels(
 														localStorage.token,
+														$isAottests,
 														$config?.features?.enable_direct_connections &&
 															($settings?.directConnections ?? null),
 														false,
@@ -642,6 +653,7 @@
 			models.set(
 				await getModels(
 					localStorage.token,
+					$isAottests,
 					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null),
 					false,
 					true
@@ -675,6 +687,7 @@
 				models.set(
 					await getModels(
 						localStorage.token,
+						$isAottests,
 						$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null),
 						false,
 						true

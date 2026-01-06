@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { models, settings, user, config } from '$lib/stores';
+	import { models, settings, user, config, isAottests } from '$lib/stores';
 	import { createEventDispatcher, onMount, getContext, tick } from 'svelte';
 
 	const dispatch = createEventDispatcher();
@@ -30,6 +30,7 @@
 			models.set(
 				await getModels(
 					localStorage.token,
+					$isAottests,
 					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
 				)
 			);
@@ -44,6 +45,7 @@
 		models.set(
 			await getModels(
 				localStorage.token,
+				$isAottests,
 				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
 			)
 		);
@@ -57,6 +59,7 @@
 		models.set(
 			await getModels(
 				localStorage.token,
+				$isAottests,
 				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
 			)
 		);
@@ -71,6 +74,7 @@
 		models.set(
 			await getModels(
 				localStorage.token,
+				$isAottests,
 				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
 			)
 		);

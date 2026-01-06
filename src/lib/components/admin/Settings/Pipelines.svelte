@@ -2,7 +2,7 @@
 	import { v4 as uuidv4 } from 'uuid';
 
 	import { toast } from 'svelte-sonner';
-	import { config, models, settings } from '$lib/stores';
+	import { config, models, settings, isAottests } from '$lib/stores';
 	import { getContext, onMount, tick } from 'svelte';
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
@@ -66,6 +66,7 @@
 				models.set(
 					await getModels(
 						localStorage.token,
+						$isAottests,
 						$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
 					)
 				);
@@ -133,6 +134,7 @@
 			models.set(
 				await getModels(
 					localStorage.token,
+					$isAottests,
 					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
 				)
 			);
@@ -163,6 +165,7 @@
 				models.set(
 					await getModels(
 						localStorage.token,
+						$isAottests,
 						$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
 					)
 				);
@@ -197,6 +200,7 @@
 			models.set(
 				await getModels(
 					localStorage.token,
+					$isAottests,
 					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
 				)
 			);

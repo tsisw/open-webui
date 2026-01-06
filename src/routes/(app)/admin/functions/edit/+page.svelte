@@ -4,7 +4,7 @@
 
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { config, functions, models, settings } from '$lib/stores';
+	import { config, functions, models, settings, isAottests } from '$lib/stores';
 	import { updateFunctionById, getFunctions, getFunctionById } from '$lib/apis/functions';
 
 	import FunctionEditor from '$lib/components/admin/Functions/FunctionEditor.svelte';
@@ -51,6 +51,7 @@
 			models.set(
 				await getModels(
 					localStorage.token,
+					$isAottests,
 					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null),
 					false,
 					true

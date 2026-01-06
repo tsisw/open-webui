@@ -5,7 +5,7 @@
 
 	import dayjs from 'dayjs';
 
-	import { settings, chatId, WEBUI_NAME, models, config } from '$lib/stores';
+	import { isAottests, settings, chatId, WEBUI_NAME, models, config } from '$lib/stores';
 	import { convertMessagesToHistory, createMessagesList } from '$lib/utils';
 
 	import { getChatByShareId, cloneSharedChatById } from '$lib/apis/chats';
@@ -82,6 +82,7 @@
 		await models.set(
 			await getModels(
 				localStorage.token,
+				$isAottests,
 				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
 			)
 		);

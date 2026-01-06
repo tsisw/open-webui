@@ -5,6 +5,7 @@ import threading
 import json
 import time
 import os
+import shlex
 import subprocess
 import mmap
 import signal
@@ -44,6 +45,7 @@ PER_1G_TIMEOUT_SECS = 240
 GB = 1024 * 1024 * 1024
 
 parameters = {
+    "aottests": "no",
     "target": "opu",
     "num_predict": DEFAULT_TOKEN,
     "repeat_penalty": DEFAULT_REPEAT_PENALTY,
@@ -186,6 +188,8 @@ def llama_cli_serial_command():
 
 UPLOAD_FOLDER = "./"  # Directory where recvFromHost is loaded
 destn_path = "/tsi/proj/model-cache/gguf/"  # Destination Directory in FPGA where uploaded files will be stored
+safetensor_destn_path = "/tsi/proj/model-cache/safetensor/"  # Destination Directory in FPGA where uploaded files will be stored
+tokenizer_destn_path = "/tsi/proj/model-cache/tokenizer/"  # Destination Directory in FPGA where uploaded files will be stored
 file_transfer_path = "/tsi/fpga_card/file-transfer"
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 os.makedirs(
@@ -284,7 +288,7 @@ def ensure_remote_dir(sftp, remote_path):
             sftp.mkdir(current_dir)
 
 
-def actual_transfer(file, file_size):
+def actual_transfer(remote_dir, file, file_size):
     # Check if the file is empty
     if file.name == "":
         return "No file selected"
@@ -295,7 +299,6 @@ def actual_transfer(file, file_size):
             # Create Sftp client and transfer file
             sftp = ssh.open_sftp()
 
-            remote_dir = "/tsi/proj/model-cache/gguf/"
             remote_path = os.path.join(remote_dir, filename)
             if not os.path.exists(remote_dir):
                 os.makedirs(remote_dir)
@@ -393,7 +396,7 @@ def receive_upload_model():
     job_status["running"] = True
     job_status["current_job"] = inspect.currentframe().f_code.co_name
 
-    remote_dir = "/tsi/proj/model-cache/gguf/"
+    remote_dir = destn_path
     if not os.path.exists(remote_dir):
         os.makedirs(remote_dir)
 
@@ -466,7 +469,7 @@ def receive_upload_model():
     full_path = file_obj.name
     print(full_path)
     try:
-        actual_transfer(file_obj, file_size)
+        actual_transfer(remote_dir, file_obj, file_size)
     except Exception as e:
         job_status["running"] = False
         return (
@@ -552,7 +555,7 @@ def receive_pull_model():
     job_status["running"] = True
     job_status["current_job"] = inspect.currentframe().f_code.co_name
 
-    remote_dir = "/tsi/proj/model-cache/gguf/"
+    remote_dir = destn_path
     if not os.path.exists(remote_dir):
         os.makedirs(remote_dir)
     try:
@@ -638,7 +641,7 @@ def receive_pull_model():
     full_path = file_obj.name
     print(full_path)
     try:
-        actual_transfer(file_obj, file_size)
+        actual_transfer(remote_dir, file_obj, file_size)
     except Exception as e:
         job_status["running"] = False
         return (
@@ -1066,44 +1069,58 @@ def chats():
 
     model = DEFAULT_MODEL
 
-    if parameters["target"] == "cpu":
-        backend = "none"
-    elif parameters["target"] == "opu":
-        backend = "tSavorite"
-    if "model" in data:
-        model = data["model"]
+    if parameters["aottests"] == "yes":
+        model_path = data["model"]
 
-    tokens = parameters["num_predict"]
-    repeat_penalty = parameters["repeat_penalty"]
-    batch_size = parameters["num_batch"]
-    top_k = parameters["top_k"]
-    top_p = parameters["top_p"]
-    last_n = parameters["repeat_last_n"]
-    context_length = parameters["num_ctx"]
-    temp = parameters["temperature"]
+        # Use only the part before ':' for directory/file names
+        model_dir = model_path.split(":", 1)[0]  # "Maykeye_TinyLLama-v0"
 
-    # Define the model path (update with actual paths)
-    model_paths = {
-        "tiny-llama": "tinyllama-vo-5m-para.gguf",
-        "TinyLlama:latest": "Tiny-Llama-v0.3-FP32-1.1B-F32.gguf",
-    }
-    model_path = model_paths.get(model, "")
-    if not model_path:
-        model_path = model
-    # Build llama-cli command
-    # command = [
-    #    "./llama-cli",
-    #    "-p", prompt,
-    #    "-m", model_path,
-    #    "--device", backend,
-    #    "--temp", "0",
-    #    "--n-predict", tokens,
-    #    "--repeat-penalty", "1",
-    #    "--top-k", "0",
-    #    "--top-p", "1"
-    # ]
-    script_path = "./run_llama_cli.sh"
-    command = f'cd {exe_path}; {script_path} "{prompt}" {tokens} {model_path} {backend} {repeat_penalty} {batch_size} {top_k} {top_p} {last_n} {context_length} {temp}'
+        # Build paths robustly
+        script_path = os.path.join("models", model_dir, f"{model_dir}.sh")
+
+        # Quote paths in shell commands to avoid issues with spaces/special chars
+        aot_tests_dir = os.path.join(exe_path, "aot-tests")
+        command = f"cd {shlex.quote(aot_tests_dir)}; {shlex.quote(script_path)}"
+    else:
+        if parameters["target"] == "cpu":
+            backend = "none"
+        elif parameters["target"] == "opu":
+            backend = "tSavorite"
+        if "model" in data:
+            model = data["model"]
+
+        tokens = parameters["num_predict"]
+        repeat_penalty = parameters["repeat_penalty"]
+        batch_size = parameters["num_batch"]
+        top_k = parameters["top_k"]
+        top_p = parameters["top_p"]
+        last_n = parameters["repeat_last_n"]
+        context_length = parameters["num_ctx"]
+        temp = parameters["temperature"]
+
+        # Define the model path (update with actual paths)
+        model_paths = {
+            "tiny-llama": "tinyllama-vo-5m-para.gguf",
+            "TinyLlama:latest": "Tiny-Llama-v0.3-FP32-1.1B-F32.gguf",
+        }
+        model_path = model_paths.get(model, "")
+        if not model_path:
+            model_path = model
+        # Build llama-cli command
+        # command = [
+        #    "./llama-cli",
+        #    "-p", prompt,
+        #    "-m", model_path,
+        #    "--device", backend,
+        #    "--temp", "0",
+        #    "--n-predict", tokens,
+        #    "--repeat-penalty", "1",
+        #    "--top-k", "0",
+        #    "--top-p", "1"
+        # ]
+        script_path = "./run_llama_cli.sh"
+        command = f'cd {exe_path}; {script_path} "{prompt}" {tokens} {model_path} {backend} {repeat_penalty} {batch_size} {top_k} {top_p} {last_n} {context_length} {temp}'
+
     if is_job_running() == True:
         return (
             manual_response(
@@ -1130,7 +1147,11 @@ def chats():
                 if response_text.startswith(command):
                     response_text = response_text[len(command) :].lstrip()
 
-                start_phrases = ["llama_perf_sampler_print: ", "OPU Profiling Results:"]
+                start_phrases = [
+                    "llama_perf_sampler_print: ",
+                    "OPU Profiling Results:",
+                    "Profiling Results",
+                ]
 
                 matched_phrase = next(
                     (phrase for phrase in start_phrases if phrase in response_text),
@@ -1201,44 +1222,58 @@ def chat():
 
     model = DEFAULT_MODEL
 
-    if parameters["target"] == "cpu":
-        backend = "none"
-    elif parameters["target"] == "opu":
-        backend = "tSavorite"
-    if "model" in data:
-        model = data["model"]
+    if parameters["aottests"] == "yes":
+        model_path = data["model"]
 
-    tokens = parameters["num_predict"]
-    repeat_penalty = parameters["repeat_penalty"]
-    batch_size = parameters["num_batch"]
-    top_k = parameters["top_k"]
-    top_p = parameters["top_p"]
-    last_n = parameters["repeat_last_n"]
-    context_length = parameters["num_ctx"]
-    temp = parameters["temperature"]
+        # Use only the part before ':' for directory/file names
+        model_dir = model_path.split(":", 1)[0]  # "Maykeye_TinyLLama-v0"
 
-    # Define the model path (update with actual paths)
-    model_paths = {
-        "tiny-llama": "tinyllama-vo-5m-para.gguf",
-        "TinyLlama:latest": "Tiny-Llama-v0.3-FP32-1.1B-F32.gguf",
-    }
-    model_path = model_paths.get(model, "")
-    if not model_path:
-        model_path = model
-    # Build llama-cli command
-    # command = [
-    #    "./llama-cli",
-    #    "-p", prompt,
-    #    "-m", model_path,
-    #    "--device", backend,
-    #    "--temp", "0",
-    #    "--n-predict", tokens,
-    #    "--repeat-penalty", "1",
-    #    "--top-k", "0",
-    #    "--top-p", "1"
-    # ]
-    script_path = "./run_llama_cli.sh"
-    command = f'cd {exe_path}; {script_path} "{prompt}" {tokens} {model_path} {backend} {repeat_penalty} {batch_size} {top_k} {top_p} {last_n} {context_length} {temp}'
+        # Build paths robustly
+        script_path = os.path.join("models", model_dir, f"{model_dir}.sh")
+
+        # Quote paths in shell commands to avoid issues with spaces/special chars
+        aot_tests_dir = os.path.join(exe_path, "aot-tests")
+        command = f"cd {shlex.quote(aot_tests_dir)}; {shlex.quote(script_path)}"
+    else:
+        if parameters["target"] == "cpu":
+            backend = "none"
+        elif parameters["target"] == "opu":
+            backend = "tSavorite"
+        if "model" in data:
+            model = data["model"]
+
+        tokens = parameters["num_predict"]
+        repeat_penalty = parameters["repeat_penalty"]
+        batch_size = parameters["num_batch"]
+        top_k = parameters["top_k"]
+        top_p = parameters["top_p"]
+        last_n = parameters["repeat_last_n"]
+        context_length = parameters["num_ctx"]
+        temp = parameters["temperature"]
+
+        # Define the model path (update with actual paths)
+        model_paths = {
+            "tiny-llama": "tinyllama-vo-5m-para.gguf",
+            "TinyLlama:latest": "Tiny-Llama-v0.3-FP32-1.1B-F32.gguf",
+        }
+        model_path = model_paths.get(model, "")
+        if not model_path:
+            model_path = model
+        # Build llama-cli command
+        # command = [
+        #    "./llama-cli",
+        #    "-p", prompt,
+        #    "-m", model_path,
+        #    "--device", backend,
+        #    "--temp", "0",
+        #    "--n-predict", tokens,
+        #    "--repeat-penalty", "1",
+        #    "--top-k", "0",
+        #    "--top-p", "1"
+        # ]
+        script_path = "./run_llama_cli.sh"
+        command = f'cd {exe_path}; {script_path} "{prompt}" {tokens} {model_path} {backend} {repeat_penalty} {batch_size} {top_k} {top_p} {last_n} {context_length} {temp}'
+
     if is_job_running() == True:
         return (
             manual_response(
@@ -1265,7 +1300,11 @@ def chat():
                 if response_text.startswith(command):
                     response_text = response_text[len(command) :].lstrip()
 
-                start_phrases = ["llama_perf_sampler_print: ", "OPU Profiling Results:"]
+                start_phrases = [
+                    "llama_perf_sampler_print: ",
+                    "OPU Profiling Results:",
+                    "Profiling Results ",
+                ]
                 matched_phrase = next(
                     (phrase for phrase in start_phrases if phrase in response_text),
                     None,
@@ -1335,6 +1374,50 @@ def restart_txe_ollama_serial_command():
             incoming_headers=incoming_headers,
         ),
         200,
+    )
+
+
+@app.route("/aottest", methods=["GET"])
+def aottest_serial_command():
+
+    # pre_and_post_check()
+
+    command = f"{exe_path}/aot-test/test-torch/add/add.sh"
+    print(command)
+    try:
+        # result = send_serial_command(command)
+        result = command
+        print(result)
+        return result, 200
+    except subprocess.CalledProcessError as e:
+        return f"Error executing script: {e.stderr}", 500
+
+
+@app.route("/api/aottest", methods=["GET", "POST"])
+def aottest_ollama_serial_command():
+    incoming_headers = dict(request.headers)
+    if is_job_running() == True:
+        return (
+            manual_response(
+                content=f"Server is busy. Current job: {job_status.get('current_job', 'Unknown')}. Please try again later.",
+                thinking=None,
+                profile_data=None,
+                incoming_headers=incoming_headers,
+            ),
+            200,
+        )
+
+    job_status["running"] = True
+    job_status["current_job"] = inspect.currentframe().f_code.co_name
+    result, error = aottest_serial_command()
+    job_status["running"] = False
+    return (
+        manual_response(
+            content=result,
+            thinking="AOT Test Results",
+            incoming_headers=incoming_headers,
+        ),
+        error,
     )
 
 

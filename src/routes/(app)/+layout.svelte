@@ -20,6 +20,7 @@
 	import {
 		config,
 		user,
+		isAottests,
 		settings,
 		models,
 		prompts,
@@ -110,6 +111,7 @@
 		models.set(
 			await getModels(
 				localStorage.token,
+				$isAottests,
 				$config?.features?.enable_direct_connections ? ($settings?.directConnections ?? null) : null
 			)
 		);

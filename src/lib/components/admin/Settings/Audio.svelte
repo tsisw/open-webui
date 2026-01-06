@@ -10,7 +10,7 @@
 		getModels as _getModels,
 		getVoices as _getVoices
 	} from '$lib/apis/audio';
-	import { config, settings } from '$lib/stores';
+	import { config, settings, isAottests } from '$lib/stores';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
@@ -66,6 +66,7 @@
 		} else {
 			const res = await _getModels(
 				localStorage.token,
+				$isAottests,
 				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
 			).catch((e) => {
 				toast.error(`${e}`);

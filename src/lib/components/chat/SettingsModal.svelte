@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { getContext, onMount, tick } from 'svelte';
 	import { toast } from 'svelte-sonner';
-	import { config, models, settings, user } from '$lib/stores';
+	import { isAottests, config, models, settings, user } from '$lib/stores';
 	import { updateUserSettings } from '$lib/apis/users';
 	import { getModels as _getModels } from '$lib/apis';
 	import { goto } from '$app/navigation';
@@ -527,6 +527,7 @@
 	const getModels = async () => {
 		return await _getModels(
 			localStorage.token,
+			$isAottests,
 			$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
 		);
 	};

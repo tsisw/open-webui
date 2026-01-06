@@ -11,6 +11,7 @@ import random
 import re
 import time
 from datetime import datetime
+import pathlib
 
 from typing import Optional, Union
 from urllib.parse import urlparse
@@ -336,13 +337,59 @@ def merge_ollama_models_lists(model_lists):
     return list(merged_models.values())
 
 
+def fetch_aot_models():
+    models = {"models": []}
+
+    try:
+        project_dir = pathlib.Path("../tsi-customer").resolve()  # safer than 'cd'
+        result = subprocess.run(
+            ["make", "list-models"],
+            cwd=project_dir,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        stdout = result.stdout
+
+        # Parse lines after "Available models:" until a blank line or non-model section
+        lines = stdout.splitlines()
+        collecting = False
+        for line in lines:
+            stripped = line.strip()
+
+            if not collecting:
+                if stripped.lower().startswith("available models:"):
+                    collecting = True
+                continue
+
+            # Stop collecting at empty line or when instruction/help section starts
+            if stripped == "":
+                break
+            if stripped.lower().startswith("to build") or stripped.lower().startswith(
+                "to run"
+            ):
+                break
+
+            # Remove leading bullets/indent; accept typical model name characters
+            models["models"].append({"name": stripped, "model": stripped})
+
+    except Exception as e:
+        print(f"process completed with exception: {e}")
+        # Return the (possibly empty) models dict
+        return models
+
+    return models
+
+
 @cached(
     ttl=MODELS_CACHE_TTL,
     key=lambda _, user: f"ollama_all_models_{user.id}" if user else "ollama_all_models",
 )
 async def get_all_models(request: Request, user: UserModel = None):
     log.info("get_all_models()")
-    if request.app.state.config.ENABLE_OLLAMA_API:
+    aottests = request.query_params.get("aottests")
+
+    if request.app.state.config.ENABLE_OLLAMA_API and aottests == "false":
         request_tasks = []
         for idx, url in enumerate(request.app.state.config.OLLAMA_BASE_URLS):
             if (str(idx) not in request.app.state.config.OLLAMA_API_CONFIGS) and (
@@ -429,7 +476,8 @@ async def get_all_models(request: Request, user: UserModel = None):
             log.debug(f"Failed to get loaded models: {e}")
 
     else:
-        models = {"models": []}
+        # models = {"models": []}
+        models = fetch_aot_models()
 
     request.app.state.OLLAMA_MODELS = {
         model["model"]: model for model in models["models"]
@@ -1400,7 +1448,6 @@ async def generate_chat_completion(
 
     model_id = payload["model"]
     model_info = Models.get_model_by_id(model_id)
-
     if model_info:
         if model_info.base_model_id:
             payload["model"] = model_info.base_model_id
@@ -1435,11 +1482,19 @@ async def generate_chat_completion(
     if ":" not in payload["model"]:
         payload["model"] = f"{payload['model']}:latest"
 
-    url, url_idx = await get_ollama_url(request, payload["model"], url_idx)
-    api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(
-        str(url_idx),
-        request.app.state.config.OLLAMA_API_CONFIGS.get(url, {}),  # Legacy support
-    )
+    is_aottests = payload["options"].get("aottests") == "yes"
+    if not is_aottests:
+        url, url_idx = await get_ollama_url(request, payload["model"], url_idx)
+        api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(
+            str(url_idx),
+            request.app.state.config.OLLAMA_API_CONFIGS.get(url, {}),  # Legacy support
+        )
+    else:
+        url, url_idx = await get_ollama_url(request, payload["model"], 1)
+        api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(
+            str(url_idx),
+            request.app.state.config.OLLAMA_API_CONFIGS.get(url, {}),  # Legacy support
+        )
 
     prefix_id = api_config.get("prefix_id", None)
     if prefix_id:
@@ -1467,6 +1522,25 @@ async def restart_opu(
     url = DEFAULT_FLASK_URL
     return await send_post_request(
         url=f"{url}/api/restart-txe",
+        payload=None,
+        stream=False,
+        key=None,
+        content_type="application/x-ndjson",
+        user=user,
+    )
+
+
+@router.post("/api/aottest")
+async def aottest(
+    request: Request,
+    form_data: dict,
+    url_idx: Optional[int] = None,
+    user=Depends(get_verified_user),
+    bypass_filter: Optional[bool] = False,
+):
+    url = DEFAULT_FLASK_URL
+    return await send_post_request(
+        url=f"{url}/api/aottest",
         payload=None,
         stream=False,
         key=None,
@@ -1683,13 +1757,19 @@ async def generate_openai_completion(
 
     if ":" not in payload["model"]:
         payload["model"] = f"{payload['model']}:latest"
-
-    url, url_idx = await get_ollama_url(request, payload["model"], url_idx)
-    api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(
-        str(url_idx),
-        request.app.state.config.OLLAMA_API_CONFIGS.get(url, {}),  # Legacy support
-    )
-
+    is_aottests = payload["options"].get("aottests") == "yes"
+    if not is_aottests:
+        url, url_idx = await get_ollama_url(request, payload["model"], url_idx)
+        api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(
+            str(url_idx),
+            request.app.state.config.OLLAMA_API_CONFIGS.get(url, {}),  # Legacy support
+        )
+    else:
+        url, url_idx = await get_ollama_url(request, payload["model"], 1)
+        api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(
+            str(url_idx),
+            request.app.state.config.OLLAMA_API_CONFIGS.get(url, {}),  # Legacy support
+        )
     prefix_id = api_config.get("prefix_id", None)
 
     if prefix_id:
@@ -1767,11 +1847,19 @@ async def generate_openai_chat_completion(
     if ":" not in payload["model"]:
         payload["model"] = f"{payload['model']}:latest"
 
-    url, url_idx = await get_ollama_url(request, payload["model"], url_idx)
-    api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(
-        str(url_idx),
-        request.app.state.config.OLLAMA_API_CONFIGS.get(url, {}),  # Legacy support
-    )
+    is_aottests = payload["options"].get("aottests") == "yes"
+    if not is_aottests:
+        url, url_idx = await get_ollama_url(request, payload["model"], url_idx)
+        api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(
+            str(url_idx),
+            request.app.state.config.OLLAMA_API_CONFIGS.get(url, {}),  # Legacy support
+        )
+    else:
+        url, url_idx = await get_ollama_url(request, payload["model"], 1)
+        api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(
+            str(url_idx),
+            request.app.state.config.OLLAMA_API_CONFIGS.get(url, {}),  # Legacy support
+        )
 
     prefix_id = api_config.get("prefix_id", None)
     if prefix_id:
