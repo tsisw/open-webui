@@ -1076,11 +1076,12 @@ def chats():
         model_dir = model_path.split(":", 1)[0]  # "Maykeye_TinyLLama-v0"
 
         # Build paths robustly
-        script_path = os.path.join("models", model_dir, f"{model_dir}.sh")
-
+        script_path = os.path.join(model_dir, f"{model_dir}.sh")
         # Quote paths in shell commands to avoid issues with spaces/special chars
-        aot_tests_dir = os.path.join(exe_path, "aot-tests")
-        command = f"cd {shlex.quote(aot_tests_dir)}; {shlex.quote(script_path)}"
+        aot_tests_dir = os.path.join(exe_path, "aot-tests/models")
+        command = (
+            f'cd {shlex.quote(aot_tests_dir)}; {shlex.quote(script_path)} "{prompt}"'
+        )
     else:
         if parameters["target"] == "cpu":
             backend = "none"
@@ -1229,11 +1230,14 @@ def chat():
         model_dir = model_path.split(":", 1)[0]  # "Maykeye_TinyLLama-v0"
 
         # Build paths robustly
-        script_path = os.path.join("models", model_dir, f"{model_dir}.sh")
+        script_path = os.path.join(model_dir, f"{model_dir}.sh")
 
         # Quote paths in shell commands to avoid issues with spaces/special chars
-        aot_tests_dir = os.path.join(exe_path, "aot-tests")
-        command = f"cd {shlex.quote(aot_tests_dir)}; {shlex.quote(script_path)}"
+        aot_tests_dir = os.path.join(exe_path, "aot-tests/models")
+
+        command = (
+            f'cd {shlex.quote(aot_tests_dir)}; {shlex.quote(script_path)} "{prompt}"'
+        )
     else:
         if parameters["target"] == "cpu":
             backend = "none"
@@ -1304,6 +1308,7 @@ def chat():
                     "llama_perf_sampler_print: ",
                     "OPU Profiling Results:",
                     "Profiling Results ",
+                    "LLAMA SP Profiling Results:",
                 ]
                 matched_phrase = next(
                     (phrase for phrase in start_phrases if phrase in response_text),
