@@ -357,7 +357,7 @@
 		{#if ($user?.role === 'admin' || ($user?.permissions.chat?.controls ?? true)) && params.aottests === 'yes'}
 			<div class="mt-2 space-y-3 pr-1.5">
 				<div class="flex justify-between items-center text-sm">
-					<div class="  font-medium">{$i18n.t('AOT Tests')}</div>
+					<div class="  font-medium">{$i18n.t('PyTorch Models')}</div>
 					<button
 						class={'w-auto text-sm px-2 py-1 rounded-md transition-colors duration-200' +
 							($settings.highContrastMode
@@ -366,7 +366,7 @@
 						on:click={async () => {
 							aotTestOutput = await compileAotTest(); // SystemInfo logic
 							if (!aotTestOutput)
-								toast.error($i18n.t(`Something went wrong while compiling aottests.`));
+								toast.error($i18n.t(`Something went wrong while compiling PyTorch models.`));
 							showSystemInfoModal = true;
 						}}
 						>{$i18n.t('Compile')}

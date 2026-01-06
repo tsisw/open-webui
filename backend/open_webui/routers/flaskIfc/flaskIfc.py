@@ -5,6 +5,7 @@ import threading
 import json
 import time
 import os
+import shlex
 import subprocess
 import mmap
 import signal
@@ -1069,8 +1070,17 @@ def chats():
     model = DEFAULT_MODEL
 
     if parameters["aottests"] == "yes":
-        script_path = "./models/linear/linear.sh"
-        command = f"cd {exe_path}/aot-tests; {script_path}"
+        model_path = data["model"]
+
+        # Use only the part before ':' for directory/file names
+        model_dir = model_path.split(":", 1)[0]  # "Maykeye_TinyLLama-v0"
+
+        # Build paths robustly
+        script_path = os.path.join("models", model_dir, f"{model_dir}.sh")
+
+        # Quote paths in shell commands to avoid issues with spaces/special chars
+        aot_tests_dir = os.path.join(exe_path, "aot-tests")
+        command = f"cd {shlex.quote(aot_tests_dir)}; {shlex.quote(script_path)}"
     else:
         if parameters["target"] == "cpu":
             backend = "none"
@@ -1213,8 +1223,17 @@ def chat():
     model = DEFAULT_MODEL
 
     if parameters["aottests"] == "yes":
-        script_path = "./models/linear/linear.sh"
-        command = f"cd {exe_path}/aot-tests; {script_path}"
+        model_path = data["model"]
+
+        # Use only the part before ':' for directory/file names
+        model_dir = model_path.split(":", 1)[0]  # "Maykeye_TinyLLama-v0"
+
+        # Build paths robustly
+        script_path = os.path.join("models", model_dir, f"{model_dir}.sh")
+
+        # Quote paths in shell commands to avoid issues with spaces/special chars
+        aot_tests_dir = os.path.join(exe_path, "aot-tests")
+        command = f"cd {shlex.quote(aot_tests_dir)}; {shlex.quote(script_path)}"
     else:
         if parameters["target"] == "cpu":
             backend = "none"
