@@ -1162,6 +1162,8 @@ def chats():
                 if matched_phrase:
                     filtered_text = response_text.split(matched_phrase, 1)[0]
                     formatted_text = response_text.split(matched_phrase, 1)[1]
+                    if "Generated text:" in filtered_text:
+                        filtered_text = filtered_text.split("Generated text:", 1)[1]
                 else:
                     filtered_text = result
                     formatted_text = None
@@ -1318,6 +1320,8 @@ def chat():
                 if matched_phrase:
                     filtered_text = response_text.split(matched_phrase, 1)[0]
                     formatted_text = response_text.split(matched_phrase, 1)[1]
+                    if "Generated text:" in filtered_text:
+                        filtered_text = filtered_text.split("Generated text:", 1)[1]
                 else:
                     filtered_text = result
                     formatted_text = None
