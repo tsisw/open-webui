@@ -1077,11 +1077,10 @@ def chats():
 
         # Build paths robustly
         script_path = os.path.join(model_dir, f"{model_dir}.sh")
+        exec_path = os.path.join(model_dir, f"{model_dir}.exe")
         # Quote paths in shell commands to avoid issues with spaces/special chars
         aot_tests_dir = os.path.join(exe_path, "aot-tests/models")
-        command = (
-            f'cd {shlex.quote(aot_tests_dir)}; {shlex.quote(script_path)} "{prompt}"'
-        )
+        command = f'cd {shlex.quote(aot_tests_dir)}; NORUN=1 source {shlex.quote(script_path)}; {shlex.quote(exec_path)} "{prompt}"'
     else:
         if parameters["target"] == "cpu":
             backend = "none"
@@ -1233,13 +1232,12 @@ def chat():
 
         # Build paths robustly
         script_path = os.path.join(model_dir, f"{model_dir}.sh")
+        exec_path = os.path.join(model_dir, f"{model_dir}.exe")
 
         # Quote paths in shell commands to avoid issues with spaces/special chars
         aot_tests_dir = os.path.join(exe_path, "aot-tests/models")
 
-        command = (
-            f'cd {shlex.quote(aot_tests_dir)}; {shlex.quote(script_path)} "{prompt}"'
-        )
+        command = f'cd {shlex.quote(aot_tests_dir)}; NORUN=1 source {shlex.quote(script_path)}; {shlex.quote(exec_path)} "{prompt}"'
     else:
         if parameters["target"] == "cpu":
             backend = "none"
