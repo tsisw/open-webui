@@ -42,7 +42,7 @@ app.register_blueprint(terminal_blueprint, url_prefix="/terminal")
 
 with open(".terminalrc", "w") as f:
     f.write("#!/bin/sh\n")
-    f.write("bash ./enter_pico.sh\n") 
+    f.write("bash ./enter_pico.sh\n")
 
 # Set the ENV variable to use this RC file
 os.environ["ENV"] = os.path.abspath(".terminalrc")
