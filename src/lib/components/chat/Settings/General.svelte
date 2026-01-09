@@ -15,7 +15,8 @@
 		restartOpu,
 		systemInfoOpu,
 		healthCheckOpu,
-		compileAotTest
+		compileAotTest,
+		uploadAotTest
 	} from '../Controls/Controls.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 
@@ -40,6 +41,7 @@
 	let showSystemInfoModal = false;
 	let systemInfoOutput = {};
 	let aotTestOutput = {};
+	let uploadAotTestOutput = {};
 	let showRestartOPUConfirmDialog = false;
 
 	const toggleNotification = async () => {
@@ -375,6 +377,32 @@
 				{#if showSystemInfoModal && aotTestOutput?.message?.content}
 					<div class="...">
 						<pre>{aotTestOutput.message.content}</pre>
+					</div>
+				{/if}
+			</div>
+		{/if}
+
+		{#if ($user?.role === 'admin' || ($user?.permissions.chat?.controls ?? true)) && params.aottests === 'yes'}
+			<div class="mt-2 space-y-3 pr-1.5">
+				<div class="flex justify-between items-center text-sm">
+					<div class="  font-medium">{$i18n.t('PyTorch Upload Models')}</div>
+					<button
+						class={'w-auto text-sm px-2 py-1 rounded-md transition-colors duration-200' +
+							($settings.highContrastMode
+								? ' border-2 border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-850 text-gray-900 dark:text-gray-100 hover:bg-blue-100 dark:hover:bg-blue-900'
+								: ' bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-600')}
+						on:click={async () => {
+							uploadAotTestOutput = await uploadAotTest(); // SystemInfo logic
+							if (!uploadAotTestOutput)
+								toast.error($i18n.t(`Something went wrong while Uploading PyTorch models.`));
+							showSystemInfoModal = true;
+						}}
+						>{$i18n.t('Upload Models')}
+					</button>
+				</div>
+				{#if showSystemInfoModal && uploadAotTestOutput?.message?.content}
+					<div class="...">
+						<pre>{uploadAotTestOutput.message.content}</pre>
 					</div>
 				{/if}
 			</div>
