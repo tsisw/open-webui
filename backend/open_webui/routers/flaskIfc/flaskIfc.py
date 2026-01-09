@@ -14,6 +14,7 @@ import serial_script
 import serial_script_for_ssh
 import re
 import inspect
+import pathlib
 from werkzeug.datastructures import FileStorage
 from werkzeug.utils import secure_filename
 
@@ -188,9 +189,16 @@ def llama_cli_serial_command():
 
 UPLOAD_FOLDER = "./"  # Directory where recvFromHost is loaded
 destn_path = "/tsi/proj/model-cache/gguf/"  # Destination Directory in FPGA where uploaded files will be stored
-safetensor_destn_path = "/tsi/proj/model-cache/safetensor/"  # Destination Directory in FPGA where uploaded files will be stored
+safetensor_destn_path = "/tsi/proj/model-cache/safetensors/"  # Destination Directory in FPGA where uploaded files will be stored
 tokenizer_destn_path = "/tsi/proj/model-cache/tokenizer/"  # Destination Directory in FPGA where uploaded files will be stored
-file_transfer_path = "/tsi/fpga_card/file-transfer"
+file_transfer_path = (
+    "/proj/rel/fpga/tsi/file-transfer"  # The copy to FPGA files are in this path
+)
+pytorch_model_path = "../../../../../tsi-customer/build-fpga/archives/"  # This is tsi-customer folder relative to open-webui
+tsi_customer_path = (
+    "../../../../../tsi-customer"  # This is relative to tsi-customer folder
+)
+aottests_model_path = "/usr/bin/tsi/bin/aot-tests/models/"
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 os.makedirs(
     UPLOAD_FOLDER, exist_ok=True
@@ -325,7 +333,7 @@ def actual_transfer(remote_dir, file, file_size):
             return f"File-transfer setup failed: {e}", 500
         stdout, stderr = process.communicate()
         script_path = "./recvFromHost "
-        command = f"cd {exe_path}; {script_path} {destn_path}{filename}\n"
+        command = f"cd {exe_path}; {script_path} {remote_dir}{filename}\n"
 
         timeout = max(
             PER_1G_TIMEOUT_SECS * file_size / GB, DEFAULT_THREAD_TIMEOUT
@@ -351,8 +359,8 @@ def actual_transfer(remote_dir, file, file_size):
 
         try:
             script_path = os.path.join(file_transfer_path, "copy2fpga-x86.sh")
-            print("file_transfer_path", script_path)
-            process = subprocess.Popen([script_path, file.name], text=True)
+            full_path = os.path.abspath(file.name)
+            process = subprocess.Popen([script_path, full_path], text=True)
             print("process completed")
         except Exception as e:
             print("process completed with exception")
@@ -1384,17 +1392,222 @@ def restart_txe_ollama_serial_command():
     )
 
 
+def fetch_aot_models_file_names():
+    models = {"models": []}
+
+    try:
+        project_dir = pathlib.Path(tsi_customer_path).resolve()  # safer than 'cd'
+        result = subprocess.run(
+            ["make", "list-models"],
+            cwd=project_dir,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        stdout = result.stdout
+
+        # Parse lines after "Available models:" until a blank line or non-model section
+        lines = stdout.splitlines()
+        collecting = False
+        for line in lines:
+            stripped = line.strip()
+
+            if not collecting:
+                if stripped.lower().startswith("available models:"):
+                    collecting = True
+                continue
+
+            # Stop collecting at empty line or when instruction/help section starts
+            if stripped == "":
+                break
+            if stripped.lower().startswith("to build") or stripped.lower().startswith(
+                "to run"
+            ):
+                break
+
+            # Remove leading bullets/indent; accept typical model name characters
+            models["models"].append({"name": stripped, "model": stripped})
+
+    except Exception as e:
+        print(f"process completed with exception: {e}")
+        # Return the (possibly empty) models dict
+        return models
+
+    return models
+
+
+@app.route("/uploadaottest", methods=["GET"])
+def aottest_upload_serial_command(incoming_headers):
+
+    # pre_and_post_check()
+    remote_dir = safetensor_destn_path
+    models = fetch_aot_models_file_names()
+
+    # Iterate until name is empty
+    for item in models["models"]:
+        if not item["name"]:  # Stop when name is empty
+            break
+
+        if item["name"] == "Mistral-7B-v0.1":  # Don't upload Mistral model right now
+            continue
+
+        new_file_name = f"{remote_dir}/{item["name"]}.tz"
+        actual_new_file_name = f"{remote_dir}/{item["name"]}"
+        current_file_name = f"{pytorch_model_path}/{item["name"]}.tz"
+        file_name = f"{item["name"]}.tz"
+        actual_file_name = f"{item["name"]}"
+
+        preliminary_target_check = send_serial_command(
+            f"cd {remote_dir}; md5sum {file_name}"
+        )
+
+        try:
+            preliminary_host_check = subprocess.run(
+                ["md5sum", current_file_name],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+        except Exception as e:
+            job_status["running"] = False
+            return (
+                manual_response(
+                    content=f"File checksum failed: {e}",
+                    thinking=f"File checksum failed: {e}",
+                    incoming_headers=incoming_headers,
+                ),
+                500,
+            )
+
+        if preliminary_target_check.split()[0].replace(
+            "\x00", ""
+        ) == preliminary_host_check.stdout.split()[0].replace("\x00", ""):
+            job_status["running"] = False
+            return (
+                manual_response(
+                    content="File Already Exists",
+                    thinking="File Already Exists",
+                    incoming_headers=incoming_headers,
+                ),
+                200,
+            )
+
+        send_serial_command(f"cd {remote_dir}; rm {file_name}", timeout=300)
+
+        try:
+            file_size = os.path.getsize(current_file_name)
+            file_obj = open(current_file_name, "rb")
+        except Exception as e:
+            job_status["running"] = False
+            return (
+                manual_response(
+                    content=f"File open failed: {e}",
+                    thinking=f"File open failed: {e}",
+                    incoming_headers=incoming_headers,
+                ),
+                500,
+            )
+
+        full_path = file_obj.name
+        full_path = os.path.abspath(current_file_name)
+        try:
+            actual_transfer(remote_dir, file_obj, file_size)
+        except Exception as e:
+            job_status["running"] = False
+            return (
+                manual_response(
+                    content=f"File transfer failed: {e}",
+                    thinking=f"File transfer failed: {e}",
+                    incoming_headers=incoming_headers,
+                ),
+                500,
+            )
+
+        send_serial_command(f"cd {remote_dir}; tar xvzf {file_name}", timeout=300)
+        send_serial_command(
+            f"cd {aottests_model_path}; ln -s {actual_new_file_name} {aottests_model_path}{actual_file_name}",
+            timeout=300,
+        )
+
+        if ssh:
+            job_status["running"] = False
+            return (
+                manual_response(
+                    content="File Download Done",
+                    thinking="File Download Done",
+                    incoming_headers=incoming_headers,
+                ),
+                200,
+            )
+
+        print("Listing out existing files")
+        send_serial_command(f"cd {remote_dir}; ls -lt", timeout=300)
+        send_serial_command(f"cd {aottests_model_path}; ls -lt", timeout=300)
+
+        target_check_sum = send_serial_command(
+            f"cd {remote_dir}; md5sum {file_name}", timeout=300
+        )
+
+        job_status["running"] = False
+
+        if target_check_sum.split()[0].replace(
+            "\x00", ""
+        ) != preliminary_host_check.stdout.split()[0].replace("\x00", ""):
+            return (
+                manual_response(
+                    content="Failed checksum match",
+                    thinking="Failed checksum match",
+                    incoming_headers=incoming_headers,
+                ),
+                400,
+            )
+
+    return (
+        manual_response(
+            content="File Download Done",
+            thinking="File Download Done",
+            incoming_headers=incoming_headers,
+        ),
+        200,
+    )
+
+
+@app.route("/api/uploadaottest", methods=["GET", "POST"])
+def aottest_upload_ollama_serial_command():
+    incoming_headers = dict(request.headers)
+    if is_job_running() == True:
+        return (
+            manual_response(
+                content=f"Server is busy. Current job: {job_status.get('current_job', 'Unknown')}. Please try again later.",
+                thinking=None,
+                profile_data=None,
+                incoming_headers=incoming_headers,
+            ),
+            200,
+        )
+
+    job_status["running"] = True
+    job_status["current_job"] = inspect.currentframe().f_code.co_name
+    result, error = aottest_upload_serial_command(incoming_headers)
+    job_status["running"] = False
+    return (
+        manual_response(
+            content="File Download Complete",
+            thinking="AOT Test Results",
+            incoming_headers=incoming_headers,
+        ),
+        error,
+    )
+
+
 @app.route("/aottest", methods=["GET"])
 def aottest_serial_command():
 
     # pre_and_post_check()
-
-    command = f"{exe_path}/aot-test/test-torch/add/add.sh"
+    command = f"{exe_path}/aot-tests/tests-torch/add/add.sh"
     print(command)
     try:
-        # result = send_serial_command(command)
-        result = command
-        print(result)
+        result = send_serial_command(command)
         return result, 200
     except subprocess.CalledProcessError as e:
         return f"Error executing script: {e.stderr}", 500
@@ -1420,7 +1633,8 @@ def aottest_ollama_serial_command():
     job_status["running"] = False
     return (
         manual_response(
-            content=result,
+            #content=result,
+            content="AOT Tests compiled",
             thinking="AOT Test Results",
             incoming_headers=incoming_headers,
         ),

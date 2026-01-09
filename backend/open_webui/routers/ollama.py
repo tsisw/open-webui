@@ -1549,6 +1549,25 @@ async def aottest(
     )
 
 
+@router.post("/api/uploadaottest")
+async def aottest(
+    request: Request,
+    form_data: dict,
+    url_idx: Optional[int] = None,
+    user=Depends(get_verified_user),
+    bypass_filter: Optional[bool] = False,
+):
+    url = DEFAULT_FLASK_URL
+    return await send_post_request(
+        url=f"{url}/api/uploadaottest",
+        payload=None,
+        stream=False,
+        key=None,
+        content_type="application/x-ndjson",
+        user=user,
+    )
+
+
 @router.post("/api/systeminfoopu")
 async def systeminfo_opu(
     request: Request,

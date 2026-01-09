@@ -120,6 +120,23 @@
 			return null;
 		}
 	}
+	export async function uploadAotTest() {
+		try {
+			const response = await fetch('/ollama/api/uploadaottest', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({ aottest: 'yes', prompt: 'your-prompt-text-here' })
+			});
+			if (!response.ok) throw new Error('Uploading AOT Test failed');
+			const data = await response.json(); // ✅ Parse JSON
+			return data; // 🔁 Return the parsed object!
+		} catch (error) {
+			console.error('Uploading of AOT Test failed:', error);
+			return null;
+		}
+	}
 	export async function systemInfoOpu() {
 		try {
 			const response = await fetch('/ollama/api/systeminfoopu', {
