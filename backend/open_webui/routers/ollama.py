@@ -1530,6 +1530,25 @@ async def restart_opu(
     )
 
 
+@router.post("/api/killpicocom")
+async def aottest(
+    request: Request,
+    form_data: dict,
+    url_idx: Optional[int] = None,
+    user=Depends(get_verified_user),
+    bypass_filter: Optional[bool] = False,
+):
+    url = DEFAULT_FLASK_URL
+    return await send_post_request(
+        url=f"{url}/api/killpicocom",
+        payload=None,
+        stream=False,
+        key=None,
+        content_type="application/x-ndjson",
+        user=user,
+    )
+
+
 @router.post("/api/aottest")
 async def aottest(
     request: Request,
