@@ -1452,11 +1452,11 @@ def aottest_upload_serial_command(incoming_headers):
         if item["name"] == "Mistral-7B-v0.1":  # Don't upload Mistral model right now
             continue
 
-        new_file_name = f"{remote_dir}/{item["name"]}.tz"
-        actual_new_file_name = f"{remote_dir}/{item["name"]}"
-        current_file_name = f"{pytorch_model_path}/{item["name"]}.tz"
-        file_name = f"{item["name"]}.tz"
-        actual_file_name = f"{item["name"]}"
+        new_file_name = f"{remote_dir}/{item['name']}.tz"
+        actual_new_file_name = f"{remote_dir}/{item['name']}"
+        current_file_name = f"{pytorch_model_path}/{item['name']}.tz"
+        file_name = f"{item['name']}.tz"
+        actual_file_name = f"{item['name']}"
 
         preliminary_target_check = send_serial_command(
             f"cd {remote_dir}; md5sum {file_name}"
