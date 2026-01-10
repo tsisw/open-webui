@@ -15,6 +15,7 @@ import serial_script_for_ssh
 import re
 import inspect
 import pathlib
+import psutil
 from werkzeug.datastructures import FileStorage
 from werkzeug.utils import secure_filename
 
@@ -1633,9 +1634,112 @@ def aottest_ollama_serial_command():
     job_status["running"] = False
     return (
         manual_response(
-            #content=result,
+            # content=result,
             content="AOT Tests compiled",
             thinking="AOT Test Results",
+            incoming_headers=incoming_headers,
+        ),
+        error,
+    )
+
+
+def find_picocom_processes():
+    """Return a list of psutil.Process objects for processes whose name or cmdline contains 'picocom'."""
+    matches = []
+    for proc in psutil.process_iter(["pid", "name", "cmdline"]):
+        try:
+            name = (proc.info.get("name") or "").lower()
+            cmdline = " ".join(proc.info.get("cmdline") or []).lower()
+            if "picocom" in name or "picocom" in cmdline:
+                matches.append(proc)
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            # Process died or we don't have permission—skip it
+            continue
+    return matches
+
+
+def terminate_process(proc: psutil.Process, timeout=5.0):
+    """
+    Try graceful termination first, then force kill if needed.
+    Returns True if the process is gone, False otherwise.
+    """
+    try:
+        # 1) Try SIGTERM (graceful)
+        proc.terminate()  # sends SIGTERM on POSIX, TerminateProcess on Windows
+    except (psutil.NoSuchProcess, psutil.AccessDenied):
+        return False
+
+    try:
+        psutil.wait_procs([proc], timeout=timeout)
+    except psutil.TimeoutExpired:
+        pass
+
+    if proc.is_running():
+        try:
+            # 2) Force kill (SIGKILL on POSIX)
+            proc.kill()
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            pass
+
+        # Give it a moment to die
+        time.sleep(0.2)
+
+    return not proc.is_running()
+
+
+def kill_all_picocom(timeout=5.0):
+    """
+    Finds all picocom processes and kills them.
+    Returns a dict with process IDs and status.
+    """
+    results = []
+    procs = find_picocom_processes()
+    for proc in procs:
+        try:
+            pid = proc.pid
+            cmdline = " ".join(proc.cmdline())
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            pid = None
+            cmdline = ""
+
+        success = terminate_process(proc, timeout=timeout)
+        results.append({"pid": pid, "cmdline": cmdline, "killed": success})
+    return results
+
+
+@app.route("/killpicocom", methods=["GET"])
+def killpicocom_command():
+    # pre_and_post_check()
+    try:
+        result = kill_all_picocom()
+        return result, 200
+    except subprocess.CalledProcessError as e:
+        return f"Error executing script: {e.stderr}", 500
+
+
+@app.route("/api/killpicocom", methods=["GET", "POST"])
+def ollama_killpicocom_command():
+    incoming_headers = dict(request.headers)
+    if is_job_running() == True:
+        return (
+            manual_response(
+                content=f"Server is busy. Current job: {job_status.get('current_job', 'Unknown')}. Please try again later.",
+                thinking=None,
+                profile_data=None,
+                incoming_headers=incoming_headers,
+            ),
+            200,
+        )
+
+    job_status["running"] = True
+    job_status["current_job"] = inspect.currentframe().f_code.co_name
+    result, error = killpicocom_command()
+    job_status["running"] = False
+    return (
+        manual_response(
+            # content=result,
+            content="picocom killed",
+            thinking="picocom kille",
             incoming_headers=incoming_headers,
         ),
         error,

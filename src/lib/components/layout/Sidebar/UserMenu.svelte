@@ -65,13 +65,31 @@
 
 	import TerminalModal from './TerminalModal.svelte';
 	let showTerminal = false;
-	let terminalUrl = window.location.origin.replace(':8443', ':5000') + `/terminal`;
+	let terminalUrl = window.location.origin.replace(':8443', ':5003') + `/terminal`;
 
 	function launchTerminal() {
 		showTerminal = true;
 	}
+	async function killPicoCom() {
+		try {
+			const response = await fetch('/ollama/api/killpicocom', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({ aottest: 'yes', prompt: 'dummy-json' })
+			});
+			if (!response.ok) throw new Error('Killing picocom failed');
+			const data = await response.json(); // ✅ Parse JSON
+			return data; // 🔁 Return the parsed object!
+		} catch (error) {
+			console.error('Killing picocom failed:', error);
+			return null;
+		}
+	}
 
 	function closeTerminal() {
+		killPicoCom();
 		showTerminal = false;
 	}
 </script>
