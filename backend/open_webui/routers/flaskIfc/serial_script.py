@@ -197,6 +197,27 @@ def abort_serial_portion(port, baudrate):
             portalocker.unlock(lock_fp)
 
 
+def initiate_serial_download(port, baudrate, filename):
+
+    while is_lock_available() != True:
+        time.sleep(1)
+    with open(SERIAL_LOCK_FILE, "w") as lock_fp:
+        # Try to acquire an exclusive lock
+        portalocker.lock(lock_fp, portalocker.LOCK_EX)
+
+        try:
+            ser = serial.Serial(port, baudrate)
+            ser.reset_output_buffer()
+            ser.reset_input_buffer()
+            ser.write(b"cd /usr/bin/tsi/bin\n")
+            command = f"sz {filename}\n"
+            ser.write(command.encode())
+            ser.close()
+        finally:
+            # Always release the lock
+            portalocker.unlock(lock_fp)
+
+
 def explicit_boot_command(port, baudrate):
     if is_lock_available() != True:
         return None

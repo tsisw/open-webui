@@ -1651,6 +1651,41 @@ def ollama_download_flask_log_command():
     )
 
 
+async def ollama_download_pytorch_output_file_command(user, file_to_download):
+
+    # Download the output file from FPGA to the Host first.
+    url = DEFAULT_FLASK_URL
+    result = await send_post_request(
+        url=f"{url}/api/initiate-download",
+        # payload=json.dumps({"file": tmpfilename}),
+        payload=json.dumps({"file": file_to_download}),
+        stream=False,
+        key=None,
+        content_type="application/json",
+        user=user,
+    )
+
+    filename = os.path.basename(file_to_download)
+    original_path = "backend/open_webui/routers/flaskIfc/" + filename
+
+    # Check if original file exists
+    if not os.path.exists(original_path):
+        raise HTTPException(status_code=404, detail="Log file not found")
+
+    # Serve the copied file
+    return FileResponse(
+        path=original_path,
+        media_type="application/octet-stream",
+        filename=filename,  # You can rename for download if needed
+        headers={
+            "Content-Disposition": f"attachment; filename={file_to_download}",
+            "Cache-Control": "no-store, no-cache, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0",
+        },
+    )
+
+
 @router.get("/api/opu-flask-log", response_class=FileResponse)
 async def download_flask_log(
     request: Request,
@@ -1671,6 +1706,18 @@ async def download_open_webui_log(
 ):
     url = DEFAULT_FLASK_URL
     return ollama_download_openwebui_log_command()
+
+
+@router.get("/api/pytorch-output-file", response_class=FileResponse)
+async def download_pytorch_output_file(
+    request: Request,
+    filename: str,
+    url_idx: Optional[int] = None,
+    user=Depends(get_verified_user),
+    bypass_filter: Optional[bool] = False,
+):
+    url = DEFAULT_FLASK_URL
+    return await ollama_download_pytorch_output_file_command(user, filename)
 
 
 @router.post("/api/healthcheckopu")

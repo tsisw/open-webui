@@ -199,6 +199,23 @@ def abort_serial_portion(shell):
             portalocker.unlock(lock_fp)
 
 
+def initiate_serial_download(shell, filename):
+    while not is_lock_available():
+        time.sleep(1)
+
+    with open(SERIAL_LOCK_FILE, "w") as lock_fp:
+        portalocker.lock(lock_fp, portalocker.LOCK_EX)
+        try:
+            # shell.reset_output_buffer()
+            # shell.reset_input_buffer()
+
+            shell.send("\x03")  # Ctrl-C
+            clean_up_after_abort(shell)
+
+        finally:
+            portalocker.unlock(lock_fp)
+
+
 def explicit_boot_command(shell):
     if not is_lock_available():
         return None
