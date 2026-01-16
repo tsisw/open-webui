@@ -121,6 +121,13 @@ def abort_serial_portion():
         return serial_script_for_ssh.abort_serial_portion(shell)
 
 
+def initiate_serial_download_command(filename):
+    if shell is None:
+        return serial_script.initiate_serial_download(port, baudrate, filename)
+    else:
+        return serial_script_for_ssh.initiate_serial_download(shell, filename)
+
+
 def is_job_running():
     if job_status["running"] == True:
         return True
@@ -843,7 +850,7 @@ def upload_file():
 
 
 def internal_restart_txe():
-    command = f"cd /tsi/fpga_card/latest_sof_release; sudo make all; make juart"
+    command = f"cd /proj/rel/fpga/tsi/latest_sof_release; make all"
 
     process = subprocess.Popen(
         [command],
@@ -1089,7 +1096,14 @@ def chats():
         exec_path = os.path.join(model_dir, f"{model_dir}.exe")
         # Quote paths in shell commands to avoid issues with spaces/special chars
         aot_tests_dir = os.path.join(exe_path, "aot-tests/models")
-        command = f'cd {shlex.quote(aot_tests_dir)}; NORUN=1 source {shlex.quote(script_path)}; {shlex.quote(exec_path)} "{prompt}"'
+        if model_dir.startswith("ArchesWeather-"):
+            input_prompt = (
+                f"--input {safetensor_destn_path}{model_dir}/inputs/small_test/"
+            )
+            output_prompt = f"--output {safetensor_destn_path}{model_dir}/output"
+            command = f"cd {shlex.quote(aot_tests_dir)}; {shlex.quote(exec_path)} {input_prompt} {output_prompt}"
+        else:
+            command = f'cd {shlex.quote(aot_tests_dir)}; NORUN=1 source {shlex.quote(script_path)}; {shlex.quote(exec_path)} "{prompt}"'
     else:
         if parameters["target"] == "cpu":
             backend = "none"
@@ -1160,6 +1174,8 @@ def chats():
                     "llama_perf_sampler_print: ",
                     "OPU Profiling Results:",
                     "Profiling Results",
+                    "LLAMA SP Profiling Results:",
+                    "ArchesWeather Profiling Results:",
                 ]
 
                 matched_phrase = next(
@@ -1172,6 +1188,10 @@ def chats():
                     formatted_text = response_text.split(matched_phrase, 1)[1]
                     if "Generated text:" in filtered_text:
                         filtered_text = filtered_text.split("Generated text:", 1)[1]
+                    if matched_phrase == "ArchesWeather Profiling Results:":
+                        output_file_phrase = "Saved output tensor to "
+                        filtered_text = filtered_text.split(output_file_phrase, 1)[1]
+                        filtered_text = filtered_text.strip().strip('"')
                 else:
                     filtered_text = result
                     formatted_text = None
@@ -1246,7 +1266,14 @@ def chat():
         # Quote paths in shell commands to avoid issues with spaces/special chars
         aot_tests_dir = os.path.join(exe_path, "aot-tests/models")
 
-        command = f'cd {shlex.quote(aot_tests_dir)}; NORUN=1 source {shlex.quote(script_path)}; {shlex.quote(exec_path)} "{prompt}"'
+        if model_dir.startswith("ArchesWeather-"):
+            input_prompt = (
+                f"--input {safetensor_destn_path}{model_dir}/inputs/small_test/"
+            )
+            output_prompt = f"--output {safetensor_destn_path}{model_dir}/output"
+            command = f"cd {shlex.quote(aot_tests_dir)}; {shlex.quote(exec_path)} {input_prompt} {output_prompt}"
+        else:
+            command = f'cd {shlex.quote(aot_tests_dir)}; NORUN=1 source {shlex.quote(script_path)}; {shlex.quote(exec_path)} "{prompt}"'
     else:
         if parameters["target"] == "cpu":
             backend = "none"
@@ -1318,6 +1345,7 @@ def chat():
                     "OPU Profiling Results:",
                     "Profiling Results ",
                     "LLAMA SP Profiling Results:",
+                    "ArchesWeather Profiling Results:",
                 ]
                 matched_phrase = next(
                     (phrase for phrase in start_phrases if phrase in response_text),
@@ -1329,6 +1357,10 @@ def chat():
                     formatted_text = response_text.split(matched_phrase, 1)[1]
                     if "Generated text:" in filtered_text:
                         filtered_text = filtered_text.split("Generated text:", 1)[1]
+                    if matched_phrase == "ArchesWeather Profiling Results:":
+                        output_file_phrase = "Saved output tensor to "
+                        filtered_text = filtered_text.split(output_file_phrase, 1)[1]
+                        filtered_text = filtered_text.strip().strip('"')
                 else:
                     filtered_text = result
                     formatted_text = None
@@ -1816,6 +1848,64 @@ def abort_task_ollama_serial_command():
     return (
         manual_response(
             content=result, thinking="Abort Task", incoming_headers=incoming_headers
+        ),
+        error,
+    )
+
+
+def initiate_serial_download(filename):
+    result = initiate_serial_download_command(filename)
+    try:
+        cmd = "rz < /dev/ttyUSB3 > /dev/ttyUSB3"
+
+        result = subprocess.run(
+            cmd,
+            shell=True,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except Exception as e:
+        return f"Error running rz: {e.stderr}", 500
+    return result, 200
+
+
+@app.route("/api/initiate-download", methods=["GET", "POST"])
+def initiate_download_ollama_serial_command():
+    incoming_headers = dict(request.headers)
+
+    data = None
+    filename = None
+
+    # Try JSON body first (POST)
+    if request.is_json:
+        data = request.get_json(silent=True) or {}
+        filename = data.get("file")
+
+    # Fallback to query string if not provided in JSON (GET or POST)
+    if not filename:
+        filename = request.args.get("file")
+
+    if not filename:
+        # Bad request if filename is missing
+        return (
+            jsonify(
+                {
+                    "status": "error",
+                    "message": "Missing 'file' parameter in JSON body or query string",
+                }
+            ),
+            400,
+        )
+
+    result, error = initiate_serial_download(filename)
+    if is_job_running() == True:
+        job_status["running"] = False
+    return (
+        manual_response(
+            content="File copied to host",
+            thinking="Initiated the download",
+            incoming_headers=incoming_headers,
         ),
         error,
     )

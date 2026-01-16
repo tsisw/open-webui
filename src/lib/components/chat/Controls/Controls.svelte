@@ -67,6 +67,41 @@
 		}
 	}
 
+	export async function downloadPyTorchOutputFile(filename) {
+		let error = null;
+		const url = `/ollama/api/pytorch-output-file?filename=${encodeURIComponent(filename)}`;
+
+		const res = await fetch(url, {
+			method: 'GET',
+			headers: {}
+		})
+			.then(async (response) => {
+				if (!response.ok) {
+					throw await response.json();
+				}
+				return response.blob();
+			})
+			.then((blob) => {
+				const url = window.URL.createObjectURL(blob);
+				const a = document.createElement('a');
+				a.href = url;
+				a.download = filename.split('/').pop();
+				document.body.appendChild(a);
+				a.click();
+				window.URL.revokeObjectURL(url);
+			})
+			.catch((err) => {
+				console.error(err);
+				error = err.detail;
+				return null;
+			});
+
+		if (error) {
+			console.error('Error Download PyTorch Output file failed:', error);
+			throw error;
+		}
+	}
+
 	export async function restartOpu() {
 		isRestarting.set(true);
 		try {

@@ -15,6 +15,8 @@
 	import { getChatById } from '$lib/apis/chats';
 	import { generateTags } from '$lib/apis';
 
+	import { downloadPyTorchOutputFile } from '../../chat/Controls/Controls.svelte';
+
 	import {
 		audioQueue,
 		config,
@@ -22,7 +24,8 @@
 		settings,
 		temporaryChatEnabled,
 		TTSWorker,
-		user
+		user,
+		isAottests
 	} from '$lib/stores';
 	import { synthesizeOpenAISpeech } from '$lib/apis/audio';
 	import { imageGenerations } from '$lib/apis/images';
@@ -49,6 +52,7 @@
 	import Sparkles from '$lib/components/icons/Sparkles.svelte';
 
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import DownloadConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 
 	import Error from './Error.svelte';
 	import Citations from './Citations.svelte';
@@ -156,6 +160,7 @@
 	let contentContainerElement: HTMLDivElement;
 	let buttonsContainerElement: HTMLDivElement;
 	let showDeleteConfirm = false;
+	let showDownloadConfirm = false;
 
 	let model = null;
 	$: model = $models.find((m) => m.id === message.model);
@@ -536,6 +541,28 @@
 		deleteMessage(message.id);
 	};
 
+	function htmlDecode(input: string): string {
+		// Use DOMParser to decode HTML entities safely
+		const doc = new DOMParser().parseFromString(input, 'text/html');
+		return doc.documentElement.textContent ?? '';
+	}
+
+	function extractBinPath(messageContent: string): string | null {
+		// 1) Decode HTML entities
+		const decoded = htmlDecode(messageContent);
+
+		// 2) Extract the .bin path
+		const match = decoded.match(/(\/[^\s<>"]+\.bin)\b/);
+		return match ? match[1] : null;
+	}
+
+	const downloadPyTorchHandler = async () => {
+		//const res = downloadPyTorchOutputFile('run_llama_cli.sh'); // Download PyTorch Output file
+		const res = downloadPyTorchOutputFile(extractBinPath(message.content)); // Download PyTorch Output file
+		if (res) toast.success($i18n.t(`Downloaded PyTorch output file successfully`));
+		else toast.error($i18n.t(`Something went wrong while downloading PyTorch Output file`));
+	};
+
 	$: if (!edit) {
 		(async () => {
 			await tick();
@@ -615,6 +642,14 @@
 	title={$i18n.t('Delete message?')}
 	on:confirm={() => {
 		deleteMessageHandler();
+	}}
+/>
+
+<DownloadConfirmDialog
+	bind:show={showDownloadConfirm}
+	title={$i18n.t('Download message?')}
+	on:confirm={() => {
+		downloadPyTorchHandler();
 	}}
 />
 
@@ -1458,6 +1493,38 @@
 												</button>
 											</Tooltip>
 										{/if}
+									{/if}
+
+									{#if isAottests && ((isLastMessage && $user?.role === 'admin') || ($user?.permissions?.chat?.continue_message ?? true))}
+										<Tooltip content={$i18n.t('Download')} placement="bottom">
+											<button
+												type="button"
+												aria-label={$i18n.t('Download')}
+												id="delete-response-button"
+												class="{isLastMessage || ($settings?.highContrastMode ?? false)
+													? 'visible'
+													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
+												on:click={() => {
+													showDownloadConfirm = true;
+												}}
+											>
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													viewBox="0 0 16 16"
+													fill="currentColor"
+													class="w-4 h-4"
+												>
+													<path
+														d="M2 3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3Z"
+													/>
+													<path
+														fill-rule="evenodd"
+														d="M13 6H3v6a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V6ZM8.75 7.75a.75.75 0 0 0-1.5 0v2.69L6.03 9.22a.75.75 0 0 0-1.06 1.06l2.5 2.5a.75.75 0 0 0 1.06 0l2.5-2.5a.75.75 0 1 0-1.06-1.06l-1.22 1.22V7.75Z"
+														clip-rule="evenodd"
+													/>
+												</svg>
+											</button>
+										</Tooltip>
 									{/if}
 
 									{#if isLastMessage}
