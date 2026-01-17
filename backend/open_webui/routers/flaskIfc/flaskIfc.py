@@ -1097,9 +1097,7 @@ def chats():
         # Quote paths in shell commands to avoid issues with spaces/special chars
         aot_tests_dir = os.path.join(exe_path, "aot-tests/models")
         if model_dir.startswith("ArchesWeather-"):
-            input_prompt = (
-                f"--input {safetensor_destn_path}{model_dir}/inputs/small_test/"
-            )
+            input_prompt = f"--input {safetensor_destn_path}/inputs/"
             output_prompt = f"--output {safetensor_destn_path}{model_dir}/output"
             command = f"cd {shlex.quote(aot_tests_dir)}; {shlex.quote(exec_path)} {input_prompt} {output_prompt}"
         else:
@@ -1267,9 +1265,7 @@ def chat():
         aot_tests_dir = os.path.join(exe_path, "aot-tests/models")
 
         if model_dir.startswith("ArchesWeather-"):
-            input_prompt = (
-                f"--input {safetensor_destn_path}{model_dir}/inputs/small_test/"
-            )
+            input_prompt = f"--input {safetensor_destn_path}inputs/"
             output_prompt = f"--output {safetensor_destn_path}{model_dir}/output"
             command = f"cd {shlex.quote(aot_tests_dir)}; {shlex.quote(exec_path)} {input_prompt} {output_prompt}"
         else:
@@ -1627,6 +1623,178 @@ def aottest_upload_ollama_serial_command():
         manual_response(
             content="File Download Complete",
             thinking="AOT Test Results",
+            incoming_headers=incoming_headers,
+        ),
+        error,
+    )
+
+
+@app.route("/uploadpytorchinput", methods=["GET"])
+def pytorch_upload_input_file_command(incoming_headers, file_name, path):
+
+    # pre_and_post_check()
+    remote_dir = safetensor_destn_path + "inputs/"
+
+    transfer_filename = os.path.basename(path)
+
+    try:
+        file_size = os.path.getsize(path)
+        file_obj = open(path, "rb")
+    except Exception as e:
+        job_status["running"] = False
+        return (
+            manual_response(
+                content=f"File open failed: {e}",
+                thinking=f"File open failed: {e}",
+                incoming_headers=incoming_headers,
+            ),
+            500,
+        )
+
+    full_path = file_obj.name
+
+    preliminary_target_check = send_serial_command(
+        f"cd {remote_dir}; md5sum {file_name}"
+    )
+
+    try:
+        preliminary_host_check = subprocess.run(
+            ["md5sum", full_path],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except Exception as e:
+        job_status["running"] = False
+        return (
+            manual_response(
+                content=f"File checksum failed: {e}",
+                thinking=f"File checksum failed: {e}",
+                incoming_headers=incoming_headers,
+            ),
+            500,
+        )
+
+    if preliminary_target_check.split()[0].replace(
+        "\x00", ""
+    ) == preliminary_host_check.stdout.split()[0].replace("\x00", ""):
+        job_status["running"] = False
+        return (
+            manual_response(
+                content="File Already Exists",
+                thinking="File Already Exists",
+                incoming_headers=incoming_headers,
+            ),
+            200,
+        )
+
+    send_serial_command(f"cd {remote_dir}; rm {file_name}", timeout=300)
+
+    try:
+        actual_transfer(remote_dir, file_obj, file_size)
+    except Exception as e:
+        job_status["running"] = False
+        return (
+            manual_response(
+                content=f"File transfer failed: {e}",
+                thinking=f"File transfer failed: {e}",
+                incoming_headers=incoming_headers,
+            ),
+            500,
+        )
+
+    if ssh:
+        job_status["running"] = False
+        return (
+            manual_response(
+                content="File Download Done",
+                thinking="File Download Done",
+                incoming_headers=incoming_headers,
+            ),
+            200,
+        )
+
+    send_serial_command(
+        f"cd {remote_dir}; mv {transfer_filename} {file_name}; ls -lt", timeout=300
+    )
+
+    target_check_sum = send_serial_command(
+        f"cd {remote_dir}; md5sum {file_name}", timeout=300
+    )
+
+    job_status["running"] = False
+
+    if target_check_sum.split()[0].replace(
+        "\x00", ""
+    ) != preliminary_host_check.stdout.split()[0].replace("\x00", ""):
+        return (
+            manual_response(
+                content="Failed checksum match",
+                thinking="Failed checksum match",
+                incoming_headers=incoming_headers,
+            ),
+            400,
+        )
+
+    return (
+        manual_response(
+            content="PyTorch Input File upload Done",
+            thinking="PyTorch Input File upload Done",
+            incoming_headers=incoming_headers,
+        ),
+        200,
+    )
+
+
+@app.route("/api/uploadpytorchinput", methods=["GET", "POST"])
+def pytorch_upload_input_file():
+    incoming_headers = dict(request.headers)
+    if is_job_running() == True:
+        return (
+            manual_response(
+                content=f"Server is busy. Current job: {job_status.get('current_job', 'Unknown')}. Please try again later.",
+                thinking=None,
+                profile_data=None,
+                incoming_headers=incoming_headers,
+            ),
+            200,
+        )
+
+    data = None
+    filename = None
+
+    # Try JSON body first (POST)
+    if request.is_json:
+        data = request.get_json(silent=True) or {}
+        filename = data.get("file")
+        full_path = data.get("path")
+
+    # Fallback to query string if not provided in JSON (GET or POST)
+    if not filename:
+        filename = request.args.get("file")
+        full_path = request.args.get("full_path")
+
+    if not filename:
+        # Bad request if filename is missing
+        return (
+            jsonify(
+                {
+                    "status": "error",
+                    "message": "Missing 'file' parameter in JSON body or query string",
+                }
+            ),
+            400,
+        )
+    job_status["running"] = True
+    job_status["current_job"] = inspect.currentframe().f_code.co_name
+    result, error = pytorch_upload_input_file_command(
+        incoming_headers, filename, full_path
+    )
+    job_status["running"] = False
+    return (
+        manual_response(
+            content="PyTorch Input File Upload Complete",
+            thinking="PyTorch Input File",
             incoming_headers=incoming_headers,
         ),
         error,
