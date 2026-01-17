@@ -170,6 +170,86 @@ def upload_file(
     )
 
 
+import json
+import urllib.request
+
+
+import json
+import urllib.request
+import urllib.error
+from typing import Any, Optional
+
+# If you have FastAPI types available in this module:
+# from fastapi import Request
+
+
+def send_with_urllib(
+    url: str,
+    payload: Any,
+    *,
+    content_type: str = "application/json",
+    user: Any = None,
+    request=None,  # type: Optional[Request]
+    timeout: float = 30.0,
+):
+    """
+    Posts to `url` using urllib with safe headers.
+    - If content_type == 'application/x-ndjson', the body will be newline-delimited.
+    - Forwards Authorization/Cookie from FastAPI `request` if provided.
+    - Adds X-User-Id if `user` has an id/email attribute (as string).
+    Returns: (status_code: int, text_body: str, response_headers: dict)
+    """
+    # Build body according to content type
+    if content_type == "application/x-ndjson":
+        # NDJSON requires newline-separated JSON objects and typically ends with '\n'
+        if isinstance(payload, (list, tuple)):
+            body_text = "\n".join(json.dumps(item) for item in payload) + "\n"
+        else:
+            body_text = json.dumps(payload) + "\n"
+        data = body_text.encode("utf-8")
+    else:
+        body_text = json.dumps(payload)
+        data = body_text.encode("utf-8")
+
+    headers = {"Content-Type": content_type}
+
+    # Forward auth (recommended) rather than sending a complex user object
+    if request is not None:
+        auth = request.headers.get("authorization")
+        if auth:
+            headers["Authorization"] = auth
+        cookie = request.headers.get("cookie")
+        if cookie:
+            headers["Cookie"] = cookie
+
+    # If you truly need a user hint, only send a STRING field (id/email)
+    if user is not None:
+        user_id = getattr(user, "id", None) or getattr(user, "user_id", None)
+        user_email = getattr(user, "email", None)
+        if user_id:
+            headers["X-User-Id"] = str(user_id)
+        elif user_email:
+            headers["X-User-Email"] = str(user_email)
+        # Do NOT send the full model in a header. If needed, put it in payload instead.
+
+    # Ensure everything is strings
+    headers = {str(k): str(v) for k, v in headers.items() if v is not None}
+
+    req = urllib.request.Request(url, data=data, headers=headers, method="POST")
+
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            charset = resp.headers.get_content_charset() or "utf-8"
+            text = resp.read().decode(charset, errors="replace")
+            return resp.status, text, dict(resp.headers)
+    except urllib.error.HTTPError as e:
+        # Return server error body for easier debugging upstream
+        err_text = e.read().decode("utf-8", errors="replace")
+        return e.code, err_text, dict(e.headers)
+    except urllib.error.URLError as e:
+        raise RuntimeError(f"POST {url} failed: {e.reason}") from e
+
+
 def upload_file_handler(
     request: Request,
     file: UploadFile = File(...),
@@ -246,6 +326,25 @@ def upload_file_handler(
                 }
             ),
         )
+        url = "http://localhost:5001"
+
+        # Admin should be able to pull models from any source
+        payload = {"file": unsanitized_filename, "path": file_path}
+
+        downstream_url = f"{url}/api/uploadpytorchinput"
+
+        status_code, body, _resp_headers = send_with_urllib(
+            url=downstream_url,
+            payload=payload,
+            content_type="application/json",  # or "application/x-ndjson"
+            user=user,  # will only send id/email, not the whole model
+            request=request,  # forwards Authorization/Cookie
+        )
+
+        log.debug(f"downstream status={status_code} body={body}")
+
+        if status_code >= 400:
+            raise HTTPException(status_code=status_code, detail=body)
 
         if process:
             if background_tasks and process_in_background:
