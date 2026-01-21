@@ -1703,6 +1703,10 @@ def pytorch_upload_input_file_command(incoming_headers, file_name, path):
             500,
         )
 
+    send_serial_command(
+        f"cd {remote_dir}; mv {transfer_filename} {file_name}; ls -lt", timeout=300
+    )
+
     if ssh:
         job_status["running"] = False
         return (
@@ -1713,10 +1717,6 @@ def pytorch_upload_input_file_command(incoming_headers, file_name, path):
             ),
             200,
         )
-
-    send_serial_command(
-        f"cd {remote_dir}; mv {transfer_filename} {file_name}; ls -lt", timeout=300
-    )
 
     target_check_sum = send_serial_command(
         f"cd {remote_dir}; md5sum {file_name}", timeout=300
