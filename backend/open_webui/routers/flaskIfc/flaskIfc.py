@@ -2022,6 +2022,23 @@ def abort_task_ollama_serial_command():
 
 
 def initiate_serial_download(filename):
+    if ssh != None and shell != None:
+        if filename:
+            # Create Sftp client and transfer file
+            sftp = ssh.open_sftp()
+
+            # Ensure remote directory exists
+            try:
+                stripped_filename = os.path.basename(filename)
+                sftp.get(filename, stripped_filename)
+            except Exception as e:
+                sftp.close()
+                return f"File-transfer failed: {e}", 500
+            sftp.close()
+            return f"File transfer succeeded", 200
+        else:
+            return f"File-transfer failed filename empty: {e}", 500
+
     result = initiate_serial_download_command(filename)
     try:
         cmd = "rz < /dev/ttyUSB3 > /dev/ttyUSB3"
