@@ -34,6 +34,7 @@ pip install flask-terminal
 pip install portalocker
 pip install paramiko
 pip3 install scp
+pip3 install psutil
 # Run the flaskIfc server
 if [ "${TSI_HOSTNAME}" == "fpga1.tsavoritesi.net" ] || [ "${TSI_HOSTNAME}" == "fpga2.tsavoritesi.net" ]  || [ "${TSI_HOSTNAME}" == "fpga3.tsavoritesi.net" ]  || [ "${TSI_HOSTNAME}" == "fpga4.tsavoritesi.net" ];
 then
