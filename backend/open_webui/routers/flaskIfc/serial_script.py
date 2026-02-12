@@ -4,12 +4,7 @@ import time
 import portalocker
 
 SERIAL_LOCK_FILE = "./serial_port.lock"  # Use a lock file
-exe_path = "/usr/bin/tsi/v0.1.1*/bin/"
 
-TXE_HOST = "localhost"
-TXE_PORT = 8000
-TXE_PROMPT = "tsi_apc_prompt>"
-TXE_CLOSE_COMMAND = "close all"
 LINUX_LOGGED_IN_PROMPT = "@agilex7_dk_si_agf014ea"
 LINUX_LOGIN_PROMPT = "agilex7_dk_si_agf014ea"
 SYSTEMD_LOGGED_IN_PROMPT = "@agilex7dksiagf014ea"
@@ -104,11 +99,6 @@ def check_for_prompt(ser, timeout=10):
                 ):
                     return True
 
-                if TXE_PROMPT in read_next_line.strip():
-                    ser.write(b"exit\n")
-                    time.sleep(3)
-                    return True
-
                 if (
                     "(Yocto Project Reference Distro) 5.2." in read_next_line.strip()
                     and (
@@ -140,10 +130,9 @@ def check_for_prompt(ser, timeout=10):
 
 
 def login_to_txe_mgr_and_send_close_all(ser):
-    ser.write(f"telnet {TXE_HOST} {TXE_PORT}\n".encode())
-    if not check_for_specific_prompt(ser, timeout=3, prompt=TXE_PROMPT):
+    ser.write(f"systemctl restart tsi-apc-manager\n".encode())
+    if not check_for_specific_prompt(ser, timeout=3, prompt=LINUX_LOGGED_IN_PROMPT):
         return None
-    ser.write(f"{TXE_CLOSE_COMMAND}\n".encode())
 
 
 def clean_up_after_abort(ser):
@@ -153,7 +142,7 @@ def clean_up_after_abort(ser):
     ser.flush()
 
     if not check_for_prompt(ser, 10):
-        if not check_for_specific_prompt(ser, timeout=3, prompt=TXE_PROMPT):
+        if not check_for_specific_prompt(ser, timeout=3, prompt=LINUX_LOGGED_IN_PROMPT):
             print("Error: TXE Manager prompt not detected, likely not running")
         else:
             print("Warning: TXE Manager prompt detected sending close all")
@@ -165,9 +154,7 @@ def clean_up_after_abort(ser):
         if not check_for_prompt(ser, 3):
             print("Warning: TXE Manager did not respond to 'close all'.")
 
-    ser.write(b"cd /usr/bin/tsi/v0.1.1*/bin/\n")
-    ser.flush()
-    ser.write(b"../install/tsi-start\n")
+    ser.write(b"systemctl restart tsi-apc-manager\n")
     ser.flush()
 
     print("TXE Manager cleanup and restart successful.")

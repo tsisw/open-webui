@@ -8,12 +8,7 @@ import re
 DEFAULT_COMMAND_TIMEOUT = 7200
 SHELL_PROMPT_REGEX = re.compile(r"root@[\w\-]+:[\w\/\-]+#")
 SERIAL_LOCK_FILE = "./serial_port.lock"  # Use a lock file
-exe_path = "/usr/bin/tsi/v0.1.1*/bin/"
 
-TXE_HOST = "localhost"
-TXE_PORT = 8000
-TXE_PROMPT = "tsi_apc_prompt>"
-TXE_CLOSE_COMMAND = "close all"
 LINUX_LOGGED_IN_PROMPT = "@agilex7_dk_si_agf014ea"
 LINUX_LOGIN_PROMPT = "agilex7_dk_si_agf014ea"
 QEMU_LOGIN_PROMPT = "qemuarm64"
@@ -26,11 +21,10 @@ SYSTEMDB_LOGGED_IN_PROMPT = "@agilex7dksiagf014eb"
 SYSTEMDB_LOGIN_PROMPT = "agilex7dksiagf014eb"
 
 
-# SSH connection details
-hostname = "192.168.1.200"
+hostname = "localhost"
 username = "root"
 password = "your_password"  # or use key-based auth
-port = 22
+port = 2222
 
 
 def is_lock_available():
@@ -117,11 +111,6 @@ def check_for_prompt(shell, timeout=10):
                 ):
                     return True
 
-                if TXE_PROMPT in read_next_line:
-                    shell.send("exit\n")
-                    time.sleep(3)
-                    return True
-
                 if "(Yocto Project Reference Distro) 5.2." in read_next_line and (
                     LINUX_LOGIN_PROMPT in read_next_line
                     or QEMU_LOGGED_IN_PROMPT in read_next_line
@@ -151,10 +140,9 @@ def check_for_prompt(shell, timeout=10):
 
 
 def login_to_txe_mgr_and_send_close_all(shell):
-    shell.send(f"telnet {TXE_HOST} {TXE_PORT}\n")
-    if not check_for_specific_prompt(shell, timeout=3, prompt=TXE_PROMPT):
+    shell.send(f"systemctl restart tsi-apc-manager\n")
+    if not check_for_specific_prompt(shell, timeout=3, prompt=LINUX_LOGGED_IN_PROMPT):
         return None
-    shell.send(f"{TXE_CLOSE_COMMAND}\n")
 
 
 def clean_up_after_abort(shell):
@@ -163,7 +151,9 @@ def clean_up_after_abort(shell):
     shell.send("\x03")
 
     if not check_for_prompt(shell, 10):
-        if not check_for_specific_prompt(shell, timeout=3, prompt=TXE_PROMPT):
+        if not check_for_specific_prompt(
+            shell, timeout=3, prompt=LINUX_LOGGED_IN_PROMPT
+        ):
             print("Error: TXE Manager prompt not detected, likely not running")
         else:
             print("Warning: TXE Manager prompt detected, sending close all")
@@ -175,8 +165,7 @@ def clean_up_after_abort(shell):
         if not check_for_prompt(shell, 3):
             print("Warning: TXE Manager did not respond to 'close all'.")
 
-    shell.send("cd /usr/bin/tsi/v0.1.1*/bin/\n")
-    shell.send("../install/tsi-start\n")
+    shell.send("systemctl restart tsi-apc-manager\n")
 
     print("TXE Manager cleanup and restart successful.")
     return True
