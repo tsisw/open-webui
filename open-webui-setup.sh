@@ -6,7 +6,7 @@ else
 source ~/.bashrc
 apt-get update && apt-get install -y python3-pip
 apt install python3.12-venv -y
-export OLLAMA_BASE_URLS="http://192.168.1.200:11434"
+export OLLAMA_BASE_URLS="http://localhost:11434"
 fi
 if [ -e .venv ] && [ "$1" != "-f" ]
 then

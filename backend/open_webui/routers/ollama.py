@@ -1368,20 +1368,77 @@ class GenerateChatCompletionForm(BaseModel):
     )
 
 
-def is_running_in_container():
-
-    # Check for boot-time environment variable
-    if os.getenv("IS_CONTAINER", "false").lower() == "true":
+def is_running_in_container() -> bool:
+    """
+    Best-effort container detection that works for Docker, Podman (rootful/rootless),
+    containerd/CRI-O, and common systemd-OCI environments.
+    """
+    # 1) Explicit opt-in env flags (yours)
+    if os.getenv("IS_CONTAINER", "").lower() == "true":
         return True
 
-    # Common heuristic: check for the existence of /.dockerenv or cgroup info
-    if os.path.exists("/.dockerenv"):
+    # 2) Common container marker files
+    # Docker: /.dockerenv
+    # Podman: /run/.containerenv
+    container_markers = ["/.dockerenv", "/run/.containerenv"]
+    if any(os.path.exists(p) for p in container_markers):
         return True
+
+    # 3) systemd marker telling we're inside a container (value: docker|podman|oci|...).
     try:
-        with open("/proc/1/cgroup", "rt") as f:
-            return "docker" in f.read() or "containerd" in f.read()
+        with open("/run/systemd/container", "rt") as f:
+            val = f.read().strip().lower()
+            if val in {"docker", "podman", "oci", "lxc"} or val:
+                return True
     except Exception:
-        return False
+        pass
+
+    # 4) Environment variables commonly set in containers
+    # Podman often sets 'container=podman' (lowercase key in env), sometimes CONTAINER
+    for key in ("container", "CONTAINER"):
+        val = os.getenv(key)
+        if val and val.strip().lower() in {"podman", "oci", "docker", "lxc"}:
+            return True
+
+    # 5) Heuristics from cgroups (v1/v2). Avoid only checking for 'docker'/'containerd'.
+    def _file_contains(path: str, needles):
+        try:
+            with open(path, "rt") as f:
+                data = f.read().lower()
+                return any(n in data for n in needles)
+        except Exception:
+            return False
+
+    # Common strings observed when inside containers across runtimes
+    cgroup_needles = {
+        "docker",
+        "containerd",
+        "kubepods",
+        "libpod",
+        "crio",
+        "podman",
+        "libcontainer",
+    }
+
+    if _file_contains("/proc/1/cgroup", cgroup_needles):
+        return True
+
+    # 6) Mount info sometimes reveals container storage/overlay patterns
+    mount_needles = {
+        "containers/storage",  # podman
+        "/overlay-containers/",  # podman
+        "docker/overlay2",
+        "docker/containers",
+        "kubepods",
+        "cri-containerd",
+    }
+    if _file_contains("/proc/1/mountinfo", mount_needles) or _file_contains(
+        "/proc/self/mountinfo", mount_needles
+    ):
+        return True
+
+    # If nothing tripped, assume host
+    return False
 
 
 async def get_ollama_url(request: Request, model: str, url_idx: Optional[int] = None):
