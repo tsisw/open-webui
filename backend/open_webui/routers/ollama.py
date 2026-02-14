@@ -13,7 +13,7 @@ import time
 from datetime import datetime
 import pathlib
 
-from typing import Optional, Union
+from typing import Optional, Union, Iterable
 from urllib.parse import urlparse
 import aiohttp
 from aiocache import cached
@@ -1368,23 +1368,54 @@ class GenerateChatCompletionForm(BaseModel):
     )
 
 
+def _hostname_starts_with(prefixes: Iterable[str]) -> bool:
+    try:
+        hn = socket.gethostname().strip().lower()
+    except Exception:
+        # Fallback if gethostname() fails (rare)
+        try:
+            with open("/etc/hostname", "rt") as f:
+                hn = f.read().strip().lower()
+        except Exception:
+            return False
+    prefixes = [p.strip().lower() for p in prefixes if p.strip()]
+    return any(hn.startswith(p) for p in prefixes)
+
+
+def _split_csv_env(name: str) -> list[str]:
+    val = os.getenv(name, "")
+    return [p.strip() for p in val.split(",") if p.strip()]
+
+
 def is_running_in_container() -> bool:
     """
     Best-effort container detection that works for Docker, Podman (rootful/rootless),
-    containerd/CRI-O, and common systemd-OCI environments.
+    containerd/CRI-O, and common systemd-OCI environments, with a hostname allowlist.
+
+    Special handling:
+      - If hostname starts with any prefix in the allowlist (e.g. "fpga"), we return False early.
+      - Allowlist can be provided via env: CONTAINER_DETECT_HOST_ALLOWLIST="fpga,labnode"
+      - You can hard-override via IS_CONTAINER=true/false.
     """
-    # 1) Explicit opt-in env flags (yours)
-    if os.getenv("IS_CONTAINER", "").lower() == "true":
+    # 0) Hostname allowlist (your requirement)
+    allowlist = _split_csv_env("CONTAINER_DETECT_HOST_ALLOWLIST") or ["fpga"]
+    if _hostname_starts_with(allowlist):
+        # These hosts are known to be non-containerized in your environment
+        return False
+
+    # 1) Explicit opt-in/out env flags
+    is_container_env = os.getenv("IS_CONTAINER", "").strip().lower()
+    if is_container_env == "true":
         return True
+    if is_container_env == "false":
+        return False
 
     # 2) Common container marker files
-    # Docker: /.dockerenv
-    # Podman: /run/.containerenv
-    container_markers = ["/.dockerenv", "/run/.containerenv"]
+    container_markers = ["/.dockerenv", "/run/.containerenv"]  # Docker / Podman
     if any(os.path.exists(p) for p in container_markers):
         return True
 
-    # 3) systemd marker telling we're inside a container (value: docker|podman|oci|...).
+    # 3) systemd marker (docker|podman|oci|lxc)
     try:
         with open("/run/systemd/container", "rt") as f:
             val = f.read().strip().lower()
@@ -1394,14 +1425,13 @@ def is_running_in_container() -> bool:
         pass
 
     # 4) Environment variables commonly set in containers
-    # Podman often sets 'container=podman' (lowercase key in env), sometimes CONTAINER
     for key in ("container", "CONTAINER"):
         val = os.getenv(key)
         if val and val.strip().lower() in {"podman", "oci", "docker", "lxc"}:
             return True
 
-    # 5) Heuristics from cgroups (v1/v2). Avoid only checking for 'docker'/'containerd'.
-    def _file_contains(path: str, needles):
+    # 5) Cgroup heuristics (v1/v2)
+    def _file_contains(path: str, needles: set[str]) -> bool:
         try:
             with open(path, "rt") as f:
                 data = f.read().lower()
@@ -1409,7 +1439,6 @@ def is_running_in_container() -> bool:
         except Exception:
             return False
 
-    # Common strings observed when inside containers across runtimes
     cgroup_needles = {
         "docker",
         "containerd",
@@ -1419,11 +1448,10 @@ def is_running_in_container() -> bool:
         "podman",
         "libcontainer",
     }
-
     if _file_contains("/proc/1/cgroup", cgroup_needles):
         return True
 
-    # 6) Mount info sometimes reveals container storage/overlay patterns
+    # 6) Mount info heuristics (overlay/containers storage)
     mount_needles = {
         "containers/storage",  # podman
         "/overlay-containers/",  # podman
