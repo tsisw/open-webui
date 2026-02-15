@@ -13,7 +13,7 @@ import time
 from datetime import datetime
 import pathlib
 
-from typing import Optional, Union, Iterable
+from typing import Optional, Union, Iterable, Any, Mapping
 from urllib.parse import urlparse
 import aiohttp
 from aiocache import cached
@@ -1503,6 +1503,13 @@ async def get_ollama_url(request: Request, model: str, url_idx: Optional[int] = 
     return url, url_idx
 
 
+def is_aottests_enabled(payload: Mapping[str, Any]) -> bool:
+    options = payload.get("options")
+    if not isinstance(options, Mapping):
+        return False
+    return options.get("aottests") == "yes"
+
+
 @router.post("/api/chat")
 @router.post("/api/chat/{url_idx}")
 async def generate_chat_completion(
@@ -1567,10 +1574,7 @@ async def generate_chat_completion(
     if ":" not in payload["model"]:
         payload["model"] = f"{payload['model']}:latest"
 
-    if "options" in payload:
-        is_aottests = payload["options"].get("aottests") == "yes"
-    else:
-        is_aottests = False
+    is_aottests = is_aottests_enabled(payload)
 
     if not is_aottests:
         url, url_idx = await get_ollama_url(request, payload["model"], url_idx)
@@ -1932,10 +1936,7 @@ async def generate_openai_completion(
     if ":" not in payload["model"]:
         payload["model"] = f"{payload['model']}:latest"
 
-    if "options" in payload:
-        is_aottests = payload["options"].get("aottests") == "yes"
-    else:
-        is_aottests = False
+    is_aottests = is_aottests_enabled(payload)
 
     if not is_aottests:
         url, url_idx = await get_ollama_url(request, payload["model"], url_idx)
@@ -2026,10 +2027,7 @@ async def generate_openai_chat_completion(
     if ":" not in payload["model"]:
         payload["model"] = f"{payload['model']}:latest"
 
-    if "options" in payload:
-        is_aottests = payload["options"].get("aottests") == "yes"
-    else:
-        is_aottests = False
+    is_aottests = is_aottests_enabled(payload)
 
     if not is_aottests:
         url, url_idx = await get_ollama_url(request, payload["model"], url_idx)
