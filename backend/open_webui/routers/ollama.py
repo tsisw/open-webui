@@ -13,7 +13,7 @@ import time
 from datetime import datetime
 import pathlib
 
-from typing import Optional, Union, Iterable
+from typing import Optional, Union, Iterable, Any, Mapping
 from urllib.parse import urlparse
 import aiohttp
 from aiocache import cached
@@ -387,7 +387,7 @@ def fetch_aot_models():
 )
 async def get_all_models(request: Request, user: UserModel = None):
     log.info("get_all_models()")
-    aottests = request.query_params.get("aottests")
+    aottests = request.query_params.get("aottests", "false")
 
     if request.app.state.config.ENABLE_OLLAMA_API and aottests == "false":
         request_tasks = []
@@ -1503,6 +1503,13 @@ async def get_ollama_url(request: Request, model: str, url_idx: Optional[int] = 
     return url, url_idx
 
 
+def is_aottests_enabled(payload: Mapping[str, Any]) -> bool:
+    options = payload.get("options")
+    if not isinstance(options, Mapping):
+        return False
+    return options.get("aottests") == "yes"
+
+
 @router.post("/api/chat")
 @router.post("/api/chat/{url_idx}")
 async def generate_chat_completion(
@@ -1567,7 +1574,8 @@ async def generate_chat_completion(
     if ":" not in payload["model"]:
         payload["model"] = f"{payload['model']}:latest"
 
-    is_aottests = payload["options"].get("aottests") == "yes"
+    is_aottests = is_aottests_enabled(payload)
+
     if not is_aottests:
         url, url_idx = await get_ollama_url(request, payload["model"], url_idx)
         api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(
@@ -1927,7 +1935,9 @@ async def generate_openai_completion(
 
     if ":" not in payload["model"]:
         payload["model"] = f"{payload['model']}:latest"
-    is_aottests = payload["options"].get("aottests") == "yes"
+
+    is_aottests = is_aottests_enabled(payload)
+
     if not is_aottests:
         url, url_idx = await get_ollama_url(request, payload["model"], url_idx)
         api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(
@@ -2017,7 +2027,8 @@ async def generate_openai_chat_completion(
     if ":" not in payload["model"]:
         payload["model"] = f"{payload['model']}:latest"
 
-    is_aottests = payload["options"].get("aottests") == "yes"
+    is_aottests = is_aottests_enabled(payload)
+
     if not is_aottests:
         url, url_idx = await get_ollama_url(request, payload["model"], url_idx)
         api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(
