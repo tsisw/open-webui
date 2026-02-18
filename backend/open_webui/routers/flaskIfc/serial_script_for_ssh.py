@@ -139,7 +139,7 @@ def check_for_prompt(shell, timeout=10):
     return False
 
 
-def login_to_txe_mgr_and_send_close_all(shell):
+def tsi_apc_manager_service_restart(shell):
     shell.send(f"systemctl restart tsi-apc-manager\n")
     if not check_for_specific_prompt(shell, timeout=3, prompt=LINUX_LOGGED_IN_PROMPT):
         return None
@@ -154,20 +154,26 @@ def clean_up_after_abort(shell):
         if not check_for_specific_prompt(
             shell, timeout=3, prompt=LINUX_LOGGED_IN_PROMPT
         ):
-            print("Error: TXE Manager prompt not detected, likely not running")
+            print(
+                "Error: Linux prompt not detected, likely job is stuck or not running"
+            )
+            return False
         else:
-            print("Warning: TXE Manager prompt detected, sending close all")
-            login_to_txe_mgr_and_send_close_all(shell)
+            tsi_apc_manager_service_restart(shell)
             if not check_for_prompt(shell, 3):
-                print("Warning: TXE Manager did not respond to 'close all'.")
+                print(
+                    "Warning: systemctl restart tsi-apc-manager did not respond to 'restart'."
+                )
+                return False
     else:
-        login_to_txe_mgr_and_send_close_all(shell)
+        tsi_apc_manager_service_restart(shell)
         if not check_for_prompt(shell, 3):
-            print("Warning: TXE Manager did not respond to 'close all'.")
+            print(
+                "Warning: systemctl restart tsi-acp-manager did not respond to 'restart'."
+            )
+            return False
 
-    shell.send("systemctl restart tsi-apc-manager\n")
-
-    print("TXE Manager cleanup and restart successful.")
+    print("tsi-apc-manager restart successful.")
     return True
 
 
