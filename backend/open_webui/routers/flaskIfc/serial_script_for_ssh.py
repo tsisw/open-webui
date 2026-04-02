@@ -7,12 +7,15 @@ import re
 
 DEFAULT_COMMAND_TIMEOUT = 7200
 SHELL_PROMPT_REGEX = re.compile(r"root@[\w\-]+:[\w\/\-]+#")
+TSISIM_SHELL_PROMPT_REGEX = re.compile(r"root@[\w\-]+:[\w\/\-]+~")
 SERIAL_LOCK_FILE = "./serial_port.lock"  # Use a lock file
 
 LINUX_LOGGED_IN_PROMPT = "@agilex7_dk_si_agf014ea"
 LINUX_LOGIN_PROMPT = "agilex7_dk_si_agf014ea"
 QEMU_LOGIN_PROMPT = "qemuarm64"
 QEMU_LOGGED_IN_PROMPT = "@qemuarm64"
+QEMU_TSISIM_LOGIN_PROMPT = "tssim"
+QEMU_TSISIM_LOGGED_IN_PROMPT = "@tsisim"
 SYSTEMD_LOGGED_IN_PROMPT = "@agilex7dksiagf014ea"
 SYSTEMD_LOGIN_PROMPT = "agilex7dksiagf014ea"
 LINUXB_LOGGED_IN_PROMPT = "@agilex7_dk_si_agf014eb"
@@ -23,7 +26,7 @@ SYSTEMDB_LOGIN_PROMPT = "agilex7dksiagf014eb"
 
 hostname = "localhost"
 username = "root"
-password = "your_password"  # or use key-based auth
+password = "taos#123"  # use password based auth
 port = 2222
 
 
@@ -60,6 +63,7 @@ def check_for_specific_prompt(shell, timeout=10, prompt=LINUX_LOGGED_IN_PROMPT):
                 if (
                     prompt in read_next_line.strip()
                     or QEMU_LOGGED_IN_PROMPT in read_next_line.strip()
+                    or QEMU_TSISIM_LOGGED_IN_PROMPT in read_next_line.strip()
                     or SYSTEMD_LOGGED_IN_PROMPT in read_next_line.strip()
                     or LINUXB_LOGGED_IN_PROMPT in read_next_line.strip()
                     or SYSTEMDB_LOGGED_IN_PROMPT in read_next_line.strip()
@@ -104,6 +108,7 @@ def check_for_prompt(shell, timeout=10):
                     or "Unknown command " in read_next_line
                     or LINUX_LOGGED_IN_PROMPT in read_next_line
                     or QEMU_LOGGED_IN_PROMPT in read_next_line
+                    or QEMU_TSISIM_LOGGED_IN_PROMPT in read_next_line
                     or SYSTEMD_LOGGED_IN_PROMPT in read_next_line
                     or LINUXB_LOGGED_IN_PROMPT in read_next_line
                     or SYSTEMDB_LOGGED_IN_PROMPT in read_next_line
@@ -114,6 +119,7 @@ def check_for_prompt(shell, timeout=10):
                 if "(Yocto Project Reference Distro) 5.2." in read_next_line and (
                     LINUX_LOGIN_PROMPT in read_next_line
                     or QEMU_LOGGED_IN_PROMPT in read_next_line
+                    or QEMU_TSISIM_LOGGED_IN_PROMPT in read_next_line
                     or SYSTEMD_LOGIN_PROMPT in read_next_line
                     or LINUXB_LOGIN_PROMPT in read_next_line
                     or SYSTEMDB_LOGIN_PROMPT in read_next_line
@@ -237,7 +243,7 @@ def explicit_root_command(shell, path):
             if (
                 "(Yocto Project Reference Distro) 5.2." in line
                 and LINUX_LOGIN_PROMPT in line
-            ) or (QEMU_LOGIN_PROMPT in line):
+            ) or (QEMU_LOGIN_PROMPT in line) or (QEMU_TSISIM_LOGIN_PROMPT in line):
                 time.sleep(3)
                 shell.send("root\n")
                 break
@@ -247,14 +253,13 @@ def restart_txe_serial_portion(shell, path):
     shell.send(path + "\n")
     time.sleep(6)
 
-
 def send_shell_command(shell, command, timeout=DEFAULT_COMMAND_TIMEOUT):
     if not is_lock_available():
         return None
     try:
         shell.send(command + "\n")
         data = "\0"
-        first_time = True
+        command_seen = False
         start = time.time()
 
         while time.time() - start < timeout:
@@ -273,11 +278,21 @@ def send_shell_command(shell, command, timeout=DEFAULT_COMMAND_TIMEOUT):
 
                     if byte in [b"\n", b"#"]:
                         break
+                line = line.decode("utf-8", errors="replace")
                 if line:
                     try:
-                        read_next_line = line.decode("utf-8", errors="replace").strip()
+                        read_next_line = line.strip()
                     except UnicodeDecodeError as e:
                         print("Decoding error:", e, "Raw line:", line)
+                        continue
+
+                    # New code to look for command instead of prompt
+                    if ( command in line ) and command_seen is False :
+                        command_seen = True;
+                        continue
+
+                    # Wait for the command to be echoed before looking for prompt
+                    if (command_seen is False):
                         continue
 
                     # Check for known completion keywords
@@ -292,20 +307,14 @@ def send_shell_command(shell, command, timeout=DEFAULT_COMMAND_TIMEOUT):
                             SYSTEMD_LOGGED_IN_PROMPT,
                             SYSTEMDB_LOGGED_IN_PROMPT,
                             QEMU_LOGGED_IN_PROMPT,
+                            QEMU_TSISIM_LOGGED_IN_PROMPT,
                             "imx8mpevk",
                         ]
                     ):
-                        if first_time:
-                            # Check for shell prompt to exit
-                            if SHELL_PROMPT_REGEX.search(read_next_line):
-                                break
-                            first_time = False
-                            continue
-                        else:
-                            break
+                        break
 
                     # Check for shell prompt to exit
-                    if SHELL_PROMPT_REGEX.search(read_next_line):
+                    if SHELL_PROMPT_REGEX.search(read_next_line) or TSISIM_SHELL_PROMPT_REGEX.search(read_next_line):
                         break
                     # Filter out noisy lines
                     if not any(
@@ -359,6 +368,7 @@ def pre_and_post_check(shell):
         if (
             "agilex7_dk_si_agf014ea login:" in decoded_line
             or "qemuarm64 login:" in decoded_line
+            or "tsisim login:" in decoded_line
             or "agilex7dksiagf014ea login:" in decoded_line
             or "agilex7_dk_si_agf014eb login:" in decoded_line
             or "agilex7dksiagf014eb login:" in decoded_line
@@ -375,6 +385,7 @@ def pre_and_post_check(shell):
         elif (
             "@agilex7_dk_si_agf014ea:" in decoded_line
             or "qemuarm64:" in decoded_line
+            or "tsisim:" in decoded_line
             or "agilex7dksiagf014ea:" in decoded_line
             or "agilex7_dk_si_agf014eb:" in decoded_line
             or "agilex7dksiagf014eb:" in decoded_line
@@ -388,7 +399,6 @@ def pre_and_post_check(shell):
     elif flag[0] == "boot issue":
         explicit_boot_command(shell)
 
-
 def connect_to_shell():
     try:
         # Create SSH client
@@ -397,8 +407,7 @@ def connect_to_shell():
 
         # Establish a transport and attempt 'none' authentication
         transport = paramiko.Transport((hostname, port))
-        transport.connect()
-        transport.auth_none(username=username)
+        transport.connect(username=username, password=password)
 
         # Attach the transport to the client
         ssh._transport = transport
