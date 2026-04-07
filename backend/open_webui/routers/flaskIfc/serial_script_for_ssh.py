@@ -4,6 +4,7 @@ import time
 import portalocker
 import paramiko
 import re
+import socket
 
 DEFAULT_COMMAND_TIMEOUT = 7200
 SHELL_PROMPT_REGEX = re.compile(r"root@[\w\-]+:[\w\/\-]+#")
@@ -241,9 +242,13 @@ def explicit_root_command(shell, path):
 
         if line:
             if (
-                "(Yocto Project Reference Distro) 5.2." in line
-                and LINUX_LOGIN_PROMPT in line
-            ) or (QEMU_LOGIN_PROMPT in line) or (QEMU_TSISIM_LOGIN_PROMPT in line):
+                (
+                    "(Yocto Project Reference Distro) 5.2." in line
+                    and LINUX_LOGIN_PROMPT in line
+                )
+                or (QEMU_LOGIN_PROMPT in line)
+                or (QEMU_TSISIM_LOGIN_PROMPT in line)
+            ):
                 time.sleep(3)
                 shell.send("root\n")
                 break
@@ -252,6 +257,7 @@ def explicit_root_command(shell, path):
 def restart_txe_serial_portion(shell, path):
     shell.send(path + "\n")
     time.sleep(6)
+
 
 def send_shell_command(shell, command, timeout=DEFAULT_COMMAND_TIMEOUT):
     if not is_lock_available():
@@ -287,12 +293,12 @@ def send_shell_command(shell, command, timeout=DEFAULT_COMMAND_TIMEOUT):
                         continue
 
                     # New code to look for command instead of prompt
-                    if ( command in line ) and command_seen is False :
-                        command_seen = True;
+                    if (command in line) and command_seen is False:
+                        command_seen = True
                         continue
 
                     # Wait for the command to be echoed before looking for prompt
-                    if (command_seen is False):
+                    if command_seen is False:
                         continue
 
                     # Check for known completion keywords
@@ -314,7 +320,9 @@ def send_shell_command(shell, command, timeout=DEFAULT_COMMAND_TIMEOUT):
                         break
 
                     # Check for shell prompt to exit
-                    if SHELL_PROMPT_REGEX.search(read_next_line) or TSISIM_SHELL_PROMPT_REGEX.search(read_next_line):
+                    if SHELL_PROMPT_REGEX.search(
+                        read_next_line
+                    ) or TSISIM_SHELL_PROMPT_REGEX.search(read_next_line):
                         break
                     # Filter out noisy lines
                     if not any(
@@ -399,33 +407,68 @@ def pre_and_post_check(shell):
     elif flag[0] == "boot issue":
         explicit_boot_command(shell)
 
-def connect_to_shell():
+
+def wait_for_ssh_banner(host, port, timeout=5):
+    """
+    Returns True only if SSH banner is actually readable
+    """
     try:
-        # Create SSH client
-        ssh = paramiko.SSHClient()
-        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        with socket.create_connection((host, port), timeout=timeout) as s:
+            s.settimeout(timeout)
+            banner = s.recv(64)
+            return banner.startswith(b"SSH-")
+    except Exception:
+        return False
 
-        # Establish a transport and attempt 'none' authentication
-        transport = paramiko.Transport((hostname, port))
-        transport.connect(username=username, password=password)
 
-        # Attach the transport to the client
-        ssh._transport = transport
+def connect_to_shell(
+    retries=10,
+    delay=30,
+):
+    last_exception = None
 
-        # Open a shell session
-        shell = ssh.invoke_shell()
+    for attempt in range(1, retries + 1):
+        print(f"Attempt {attempt}/{retries}")
 
-        if shell is None:
-            print("No connection establisted with shell")
+        # ✅ PRE-CHECK SSH REALLY READY
+        if not wait_for_ssh_banner(hostname, port):
+            print("SSH banner not ready yet")
+            time.sleep(delay)
+            continue
 
-        # Wait and read response
-        time.sleep(2)  # wait for command to execute
-        output = shell.recv(1024).decode()
-        print("Response:", output)
-    except Exception as e:
-        print("SSH connection failed:", e)
-    finally:
-        return ssh, shell
+        ssh = None
+        try:
+            ssh = paramiko.SSHClient()
+            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+            ssh.connect(
+                hostname=hostname,
+                port=port,
+                username=username,
+                password=password,
+                timeout=15,
+                banner_timeout=30,
+                auth_timeout=30,
+                look_for_keys=False,
+                allow_agent=False,
+            )
+
+            shell = ssh.invoke_shell()
+            return ssh, shell
+
+        except paramiko.ssh_exception.SSHException as e:
+            last_exception = e
+            print(f"Paramiko failed: {e}")
+
+            try:
+                if ssh:
+                    ssh.close()
+            except Exception:
+                pass
+
+            time.sleep(delay)
+
+    raise RuntimeError("SSH failed after all retries") from last_exception
 
 
 def disconnect_shell(ssh, shell):
