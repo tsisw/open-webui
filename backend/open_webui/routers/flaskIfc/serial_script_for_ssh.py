@@ -146,9 +146,9 @@ def check_for_prompt(shell, timeout=10):
     return False
 
 
-def tsi_apc_manager_service_restart(shell):
-    shell.send(f"systemctl restart tsi-apc-manager\n")
-    if not check_for_specific_prompt(shell, timeout=3, prompt=LINUX_LOGGED_IN_PROMPT):
+def tsi_apc_manager_service_release_txe(shell):
+    shell.send(f"tsictl txe release 0\n")
+    if not check_for_specific_prompt(shell, timeout=3, prompt=QEMU_TSISIM_LOGGED_IN_PROMPT):
         return None
 
 
@@ -159,21 +159,21 @@ def clean_up_after_abort(shell):
 
     if not check_for_prompt(shell, 10):
         if not check_for_specific_prompt(
-            shell, timeout=3, prompt=LINUX_LOGGED_IN_PROMPT
+            shell, timeout=3, prompt=QEMU_TSISIM_LOGGED_IN_PROMPT
         ):
             print(
                 "Error: Linux prompt not detected, likely job is stuck or not running"
             )
             return False
         else:
-            tsi_apc_manager_service_restart(shell)
+            tsi_apc_manager_service_release_txe(shell)
             if not check_for_prompt(shell, 3):
                 print(
                     "Warning: systemctl restart tsi-apc-manager did not respond to 'restart'."
                 )
                 return False
     else:
-        tsi_apc_manager_service_restart(shell)
+        tsi_apc_manager_service_release_txe(shell)
         if not check_for_prompt(shell, 3):
             print(
                 "Warning: systemctl restart tsi-acp-manager did not respond to 'restart'."
@@ -195,7 +195,6 @@ def abort_serial_portion(shell):
             # shell.reset_input_buffer()
 
             shell.send("\x03")  # Ctrl-C
-            clean_up_after_abort(shell)
 
         finally:
             portalocker.unlock(lock_fp)
