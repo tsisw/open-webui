@@ -11,16 +11,16 @@ SHELL_PROMPT_REGEX = re.compile(r"root@[\w\-]+:[\w\/\-]+#")
 TSISIM_SHELL_PROMPT_REGEX = re.compile(r"root@[\w\-]+:[\w\/\-]+~")
 SERIAL_LOCK_FILE = "./serial_port.lock"  # Use a lock file
 
-LINUX_LOGGED_IN_PROMPT = "@agilex7_dk_si_agf014ea"
-LINUX_LOGIN_PROMPT = "agilex7_dk_si_agf014ea"
+LINUX_LOGGED_IN_PROMPT = "@agilex7dksiagf014eb"
+LINUX_LOGIN_PROMPT = "agilex7dksiagf014eb"
 QEMU_LOGIN_PROMPT = "qemuarm64"
 QEMU_LOGGED_IN_PROMPT = "@qemuarm64"
 QEMU_TSISIM_LOGIN_PROMPT = "tssim"
 QEMU_TSISIM_LOGGED_IN_PROMPT = "@tsisim"
-SYSTEMD_LOGGED_IN_PROMPT = "@agilex7dksiagf014ea"
-SYSTEMD_LOGIN_PROMPT = "agilex7dksiagf014ea"
-LINUXB_LOGGED_IN_PROMPT = "@agilex7_dk_si_agf014eb"
-LINUXB_LOGIN_PROMPT = "agilex7_dk_si_agf014eb"
+SYSTEMD_LOGGED_IN_PROMPT = "@agilex7dksiagf014eb"
+SYSTEMD_LOGIN_PROMPT = "agilex7dksiagf014eb"
+LINUXB_LOGGED_IN_PROMPT = "@agilex7dksiagf014eb"
+LINUXB_LOGIN_PROMPT = "agilex7dksiagf014eb"
 SYSTEMDB_LOGGED_IN_PROMPT = "@agilex7dksiagf014eb"
 SYSTEMDB_LOGIN_PROMPT = "agilex7dksiagf014eb"
 
@@ -39,47 +39,6 @@ def is_lock_available():
         return True  # Lock was successfully acquired
     except portalocker.exceptions.LockException:
         return False  # Lock is already held by another process
-
-
-def check_for_specific_prompt(shell, timeout=10, prompt=LINUX_LOGGED_IN_PROMPT):
-    data = "\0"
-    start = time.time()
-
-    while time.time() - start < timeout:
-        try:
-            line = b""
-            while time.time() - start < timeout:
-                byte = shell.recv(1)  # Read one byte at a time
-                line += byte
-                if byte in [b"\n", b"#", b">"]:  # Stop when delimiter is found
-                    break
-
-            if line:
-                try:
-                    read_next_line = line.decode("utf-8", errors="replace")
-                except UnicodeDecodeError as e:
-                    print("Decoding error:", e, "Raw line:", line)
-                    continue
-
-                if (
-                    prompt in read_next_line.strip()
-                    or QEMU_LOGGED_IN_PROMPT in read_next_line.strip()
-                    or QEMU_TSISIM_LOGGED_IN_PROMPT in read_next_line.strip()
-                    or SYSTEMD_LOGGED_IN_PROMPT in read_next_line.strip()
-                    or LINUXB_LOGGED_IN_PROMPT in read_next_line.strip()
-                    or SYSTEMDB_LOGGED_IN_PROMPT in read_next_line.strip()
-                ):
-                    return True
-            else:
-                return False
-
-        except Exception as e:
-            print(f"Shell read error: {e}")
-            return False
-        except KeyboardInterrupt:
-            return False
-
-    return False
 
 
 def check_for_prompt(shell, timeout=10):
@@ -148,7 +107,7 @@ def check_for_prompt(shell, timeout=10):
 
 def tsi_apc_manager_service_release_txe(shell):
     shell.send(f"tsictl txe release 0\n")
-    if not check_for_specific_prompt(shell, timeout=3, prompt=QEMU_TSISIM_LOGGED_IN_PROMPT):
+    if not check_for_prompt(shell, timeout=10):
         return None
 
 
@@ -158,23 +117,11 @@ def clean_up_after_abort(shell):
     shell.send("\x03")
 
     if not check_for_prompt(shell, 10):
-        if not check_for_specific_prompt(
-            shell, timeout=3, prompt=QEMU_TSISIM_LOGGED_IN_PROMPT
-        ):
-            print(
-                "Error: Linux prompt not detected, likely job is stuck or not running"
-            )
-            return False
-        else:
-            tsi_apc_manager_service_release_txe(shell)
-            if not check_for_prompt(shell, 3):
-                print(
-                    "Warning: systemctl restart tsi-apc-manager did not respond to 'restart'."
-                )
-                return False
+        print("Error: Linux prompt not detected, likely job is stuck or not running")
+        return False
     else:
         tsi_apc_manager_service_release_txe(shell)
-        if not check_for_prompt(shell, 3):
+        if not check_for_prompt(shell, 10):
             print(
                 "Warning: systemctl restart tsi-acp-manager did not respond to 'restart'."
             )

@@ -5,12 +5,12 @@ import portalocker
 
 SERIAL_LOCK_FILE = "./serial_port.lock"  # Use a lock file
 
-LINUX_LOGGED_IN_PROMPT = "@agilex7_dk_si_agf014ea"
-LINUX_LOGIN_PROMPT = "agilex7_dk_si_agf014ea"
-SYSTEMD_LOGGED_IN_PROMPT = "@agilex7dksiagf014ea"
-SYSTEMD_LOGIN_PROMPT = "agilex7dksiagf014ea"
-LINUXB_LOGGED_IN_PROMPT = "@agilex7_dk_si_agf014eb"
-LINUXB_LOGIN_PROMPT = "agilex7_dk_si_agf014eb"
+LINUX_LOGGED_IN_PROMPT = "@agilex7dksiagf014eb"
+LINUX_LOGIN_PROMPT = "agilex7dksiagf014eb"
+SYSTEMD_LOGGED_IN_PROMPT = "@agilex7dksiagf014eb"
+SYSTEMD_LOGIN_PROMPT = "agilex7dksiagf014eb"
+LINUXB_LOGGED_IN_PROMPT = "@agilex7dksiagf014eb"
+LINUXB_LOGIN_PROMPT = "agilex7dksiagf014eb"
 SYSTEMDB_LOGGED_IN_PROMPT = "@agilex7dksiagf014eb"
 SYSTEMDB_LOGIN_PROMPT = "agilex7dksiagf014eb"
 
@@ -23,45 +23,6 @@ def is_lock_available():
         return True  # Lock was successfully acquired
     except portalocker.exceptions.LockException:
         return False  # Lock is already held by another process
-
-
-def check_for_specific_prompt(ser, timeout=10, prompt=LINUX_LOGGED_IN_PROMPT):
-    # Wait to read the serial port
-    data = "\0"
-    first_time = 1
-    ser.timeout = timeout
-    start = time.time()
-    while time.time() - start < timeout:
-        try:
-            # read byte by byte to find either a new line character or a prompt marker
-            # instead of new line using line = ser.readline()
-            line = b""
-            while time.time() - start < timeout:
-                byte = ser.read(1)  # Read one byte at a time
-                line += byte
-                if (
-                    (byte == b"\n") or (byte == b"#") or (byte == b">")
-                ):  # Stop when delimiter is found
-                    break
-            if line:  # Check if line is not empty
-                try:
-                    read_next_line = line.decode("utf-8", errors="replace")
-                except UnicodeDecodeError as e:
-                    print("Decoding error:", e, "Raw line:", line)
-                if (
-                    prompt in read_next_line.strip()
-                    or SYSTEMD_LOGGED_IN_PROMPT in read_next_line.strip()
-                    or LINUXB_LOGGED_IN_PROMPT in read_next_line.strip()
-                ):
-                    return True
-            else:
-                return False
-
-        except serial.SerialException as e:
-            return False
-        except KeyboardInterrupt:
-            return False
-    return False
 
 
 def check_for_prompt(ser, timeout=10):
@@ -131,7 +92,7 @@ def check_for_prompt(ser, timeout=10):
 
 def tsi_apc_manager_service_restart(ser):
     ser.write(f"systemctl restart tsi-apc-manager\n".encode())
-    if not check_for_specific_prompt(ser, timeout=3, prompt=LINUX_LOGGED_IN_PROMPT):
+    if not check_for_prompt(ser, timeout=10):
         return None
 
 
@@ -142,19 +103,11 @@ def clean_up_after_abort(ser):
     ser.flush()
 
     if not check_for_prompt(ser, 10):
-        if not check_for_specific_prompt(ser, timeout=3, prompt=LINUX_LOGGED_IN_PROMPT):
-            print("Error: Linux prompt not detected, likely job or system is stuck")
-            return False
-        else:
-            tsi_apc_manager_service_restart(ser)
-            if not check_for_prompt(ser, 3):
-                print(
-                    "Warning: systemctl restart tsi-apc-manager did not respond to 'restart'."
-                )
-                return False
+        print("Error: Linux prompt not detected, likely job or system is stuck")
+        return False
     else:
         tsi_apc_manager_service_restart(ser)
-        if not check_for_prompt(ser, 3):
+        if not check_for_prompt(ser, 10):
             print(
                 "Warning: systemctl restart tsi-apc-manager did not respond to 'restart'."
             )
