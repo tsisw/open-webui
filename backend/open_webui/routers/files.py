@@ -343,6 +343,20 @@ def upload_file_handler(
 
         log.debug(f"downstream status={status_code} body={body}")
 
+        parsed_body = None
+        if isinstance(body, str):
+            try:
+                parsed_body = json.loads(body)
+            except json.JSONDecodeError:
+                parsed_body = None
+        elif isinstance(body, dict):
+            parsed_body = body
+
+        # ---- semantic success override ----
+        if isinstance(parsed_body, dict) and parsed_body.get("status") == "success":
+            status_code = 200
+            body = parsed_body
+
         if status_code >= 400:
             raise HTTPException(status_code=status_code, detail=body)
 
