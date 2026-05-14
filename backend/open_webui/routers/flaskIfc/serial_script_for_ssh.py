@@ -106,7 +106,7 @@ def check_for_prompt(shell, timeout=10):
 
 
 def tsi_apc_manager_service_release_txe(shell):
-    shell.send(f"tsictl txe release 0\n")
+    shell.send(f"tsictl oc release 0 1\n")
     if not check_for_prompt(shell, timeout=10):
         return None
 
