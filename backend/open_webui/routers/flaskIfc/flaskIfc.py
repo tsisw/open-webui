@@ -906,7 +906,7 @@ def health_check_serial_command():
 
     pre_and_post_check()
 
-    command = f"uptime; free -h; df -h; top -b -n1"
+    command = f"echo --- tsictl oc show ---; tsictl oc show; echo --- tcictl oc policy show ---; tsictl oc policy show; echo --- tsictl oc hw status 0 ---; tsictl oc hw status 0; echo --- tsictl oc hw status 1 ---; tsictl oc hw status 1; echo --- free -h ---; free -h; echo --- df -h ---; df -h; echo --- top -b -n1 ---; top -b -n1"
 
     try:
         result = send_serial_command(command)
@@ -934,7 +934,7 @@ def system_info_serial_command():
 
     pre_and_post_check()
 
-    command = f"{exe_path}../install/tsi-version; uptime; lsmod; lscpu; lsblk"
+    command = f"echo --- tsi-version ---; source tsi-version; echo --- tsictl oc show ---; tsictl oc show; echo --- uptime ---; uptime; echo --- lsmod ---; lsmod; echo --- lscpu ---; lscpu; echo --- lsblk ---; lsblk"
 
     try:
         result = send_serial_command(command)
