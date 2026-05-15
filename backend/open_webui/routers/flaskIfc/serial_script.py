@@ -90,8 +90,8 @@ def check_for_prompt(ser, timeout=10):
     return False
 
 
-def tsi_apc_manager_service_restart(ser):
-    ser.write(f"systemctl restart tsi-apc-manager\n".encode())
+def tsi_apc_manager_release_txe(ser):
+    ser.write(f"tsictl oc release 0\n".encode())
     if not check_for_prompt(ser, timeout=10):
         return None
 
@@ -106,7 +106,7 @@ def clean_up_after_abort(ser):
         print("Error: Linux prompt not detected, likely job or system is stuck")
         return False
     else:
-        tsi_apc_manager_service_restart(ser)
+        tsi_apc_manager_release_txe(ser)
         if not check_for_prompt(ser, 10):
             print(
                 "Warning: systemctl restart tsi-apc-manager did not respond to 'restart'."
@@ -115,7 +115,7 @@ def clean_up_after_abort(ser):
 
     ser.flush()
 
-    print("tsi-apc-manager restart successful.")
+    print("tsi-apc-manager txe release successful.")
     return True
 
 
