@@ -257,7 +257,7 @@
 		};
 		setupKeyboardShortcuts();
 
-		if ($user?.role === 'admin' && ($settings?.showChangelog ?? true)) {
+		if ($user?.role === 'admin' && ($settings?.showChangelog ?? false)) {
 			showChangelog.set($settings?.version !== $config.version);
 		}
 
@@ -303,7 +303,7 @@
 <SettingsModal bind:show={$showSettings} />
 <ChangelogModal bind:show={$showChangelog} />
 
-{#if version && compareVersion(version.latest, version.current) && ($settings?.showUpdateToast ?? true)}
+{#if version && compareVersion(version.latest, version.current) && ($settings?.showUpdateToast ?? false)}
 	<div class=" absolute bottom-8 right-8 z-50" in:fade={{ duration: 100 }}>
 		<UpdateInfoToast
 			{version}
